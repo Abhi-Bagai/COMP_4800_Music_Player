@@ -1,0 +1,29 @@
+{
+  "name": "starlight",
+  "main": "expo-router/entry",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "expo start",
+    "reset-project": "node ./scripts/reset-project.js",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "lint": "expo lint"
+  },
+  "dependencies": {
+    "expo": "~54.0.10",
+    "expo-status-bar": "~3.0.8",
+    "react": "19.1.0",
+    "react-native": "0.81.4",
+    "drizzle-orm": "^0.44.5",
+    "zustand": "^5.0.1"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.0",
+    "typescript": "~5.9.2",
+    "drizzle-kit": "^0.31.4",
+    "eslint": "^9.25.0",
+    "eslint-config-expo": "~10.0.0"
+  },
+  "private": true
+}
