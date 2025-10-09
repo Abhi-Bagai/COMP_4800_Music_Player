@@ -1,16 +1,20 @@
-import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-gesture-handler';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import 'react-native-reanimated';
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider as NavigationThemeProvider,
+} from "@react-navigation/native";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import "react-native-gesture-handler";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import "react-native-reanimated";
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { AudioPlaybackProvider } from '@/src/components/audio-playback-provider';
-import { ThemeProvider } from '@/src/theme/provider';
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { AudioPlaybackProvider } from "@/src/components/audio-playback-provider";
+import { ThemeProvider } from "@/src/theme/provider";
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  anchor: "(tabs)",
 };
 
 export default function RootLayout() {
@@ -18,12 +22,15 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider>
+      <ThemeProvider initialMode="dark">
         <AudioPlaybackProvider />
-        <NavigationThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <NavigationThemeProvider value={DarkTheme}>
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+            <Stack.Screen
+              name="modal"
+              options={{ presentation: "modal", title: "Modal" }}
+            />
           </Stack>
           <StatusBar style="auto" />
         </NavigationThemeProvider>
