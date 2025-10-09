@@ -35,6 +35,7 @@ const MAPPING = {
   'chevron.left': 'chevron-left',
   'folder': 'folder',
   'xmark.circle.fill': 'highlight-off',
+  'gear': 'settings',
 } as IconMapping;
 
 /**
