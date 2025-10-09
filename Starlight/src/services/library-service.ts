@@ -1,5 +1,13 @@
-import { fetchLibrarySnapshot, upsertLibraryBatch, deleteTrackPermanently, clearAllTracks, type LibraryBatchUpsert } from '@/src/db';
-import { useLibraryStore } from '@/src/state';
+import {
+  fetchLibrarySnapshot,
+  upsertLibraryBatch,
+  deleteTrackPermanently,
+  clearAllTracks,
+  type LibraryBatchUpsert,
+} from "@/src/db";
+import { useLibraryStore } from "@/src/state";
+
+export type { LibraryBatchUpsert };
 
 export async function hydrateLibraryFromDatabase() {
   const setTracks = useLibraryStore.getState().setTracks;
