@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
+  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -22,6 +23,7 @@ import { SidebarNavigation } from "@/src/components/sidebar-navigation";
 import { TableView } from "@/src/components/table-view";
 import { TagManager } from "@/src/components/tag-manager";
 import { Button } from "@/src/components/ui/button";
+import { DropdownMenu } from "@/src/components/ui/dropdown-menu";
 import { IconButton } from "@/src/components/ui/icon-button";
 import { Text } from "@/src/components/ui/text";
 import {
@@ -30,7 +32,7 @@ import {
   hydrateLibraryFromDatabase,
 } from "@/src/services/library-service";
 import { playTrack } from "@/src/services/playback-service";
-import { hydratePlaylistsFromDatabase } from "@/src/services/playlist-service";
+import { hydratePlaylistsFromDatabase, clearAllPlaylistsService } from "@/src/services/playlist-service";
 import { useLibraryStore, usePlayerStore, usePlaylistStore } from "@/src/state";
 import { useTheme } from "@/src/theme/provider";
 
@@ -55,6 +57,7 @@ export default function HomeScreen() {
   const [selectedTrackForTagging, setSelectedTrackForTagging] =
     useState<any>(null);
   const [sidebarWidth, setSidebarWidth] = useState(280);
+  const [showGearMenu, setShowGearMenu] = useState(false);
 
   useEffect(() => {
     hydrateLibraryFromDatabase();
@@ -127,6 +130,7 @@ export default function HomeScreen() {
   };
 
   const handleClearLibrary = async () => {
+    console.log('handleClearLibrary called');
     // Web Alert has only one button, so use confirm dialog instead
     if (Platform.OS === "web") {
       const confirmed =
@@ -164,6 +168,49 @@ export default function HomeScreen() {
             } catch (error) {
               console.error("Error clearing library:", error);
               Alert.alert("Error", "Failed to clear library");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleClearAllPlaylists = async () => {
+    console.log('handleClearAllPlaylists called');
+    // Web Alert has only one button, so use confirm dialog instead
+    if (Platform.OS === "web") {
+      const confirmed =
+        typeof window !== "undefined" && typeof window.confirm === "function"
+          ? window.confirm(
+              "Are you sure you want to delete ALL playlists? This cannot be undone."
+            )
+          : true;
+      if (!confirmed) return;
+      try {
+        await clearAllPlaylistsService();
+        Alert.alert("Success", "All playlists cleared successfully");
+      } catch (error) {
+        console.error("Error clearing playlists:", error);
+        Alert.alert("Error", "Failed to clear playlists");
+      }
+      return;
+    }
+
+    Alert.alert(
+      "Clear All Playlists",
+      "Are you sure you want to delete ALL playlists? This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear All",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await clearAllPlaylistsService();
+              Alert.alert("Success", "All playlists cleared successfully");
+            } catch (error) {
+              console.error("Error clearing playlists:", error);
+              Alert.alert("Error", "Failed to clear playlists");
             }
           },
         },
@@ -250,6 +297,9 @@ export default function HomeScreen() {
                 <IconSymbol name="gear" size={24} color={tokens.colors.text} />
               }
               accessibilityLabel="Settings"
+              onPress={() => {
+                setShowGearMenu(true);
+              }}
             />
           </View>
         </View>
@@ -423,6 +473,54 @@ export default function HomeScreen() {
           // Here you would update the track's tags in the database
         }}
       />
+
+      {/* Gear Menu Modal */}
+      <Modal
+        visible={showGearMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowGearMenu(false)}
+      >
+        <Pressable 
+          style={styles.gearMenuBackdrop} 
+          onPress={() => setShowGearMenu(false)}
+        >
+          <View style={[styles.gearMenu, { backgroundColor: tokens.colors.surface }]}>
+            <Pressable
+              style={styles.gearMenuItem}
+              onPress={() => {
+                setShowGearMenu(false);
+                handleClearLibrary();
+              }}
+            >
+              <View style={styles.gearMenuItemContent}>
+                <View style={styles.gearMenuItemIcon}>
+                  <IconSymbol name="trash" size={16} color={tokens.colors.danger} />
+                </View>
+                <Text style={[styles.gearMenuItemText, { color: tokens.colors.danger }]}>
+                  Delete All Songs
+                </Text>
+              </View>
+            </Pressable>
+            <Pressable
+              style={styles.gearMenuItem}
+              onPress={() => {
+                setShowGearMenu(false);
+                handleClearAllPlaylists();
+              }}
+            >
+              <View style={styles.gearMenuItemContent}>
+                <View style={styles.gearMenuItemIcon}>
+                  <IconSymbol name="trash" size={16} color={tokens.colors.danger} />
+                </View>
+                <Text style={[styles.gearMenuItemText, { color: tokens.colors.danger }]}>
+                  Delete All Playlists
+                </Text>
+              </View>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -525,6 +623,48 @@ const styles = StyleSheet.create({
   },
   emptyAction: {
     paddingHorizontal: 32,
+  },
+
+  // Gear Menu Styles
+  gearMenuBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  gearMenu: {
+    position: 'absolute',
+    top: 80,
+    right: 20,
+    width: 200,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  gearMenuItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  gearMenuItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  gearMenuItemIcon: {
+    width: 20,
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  gearMenuItemText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
 

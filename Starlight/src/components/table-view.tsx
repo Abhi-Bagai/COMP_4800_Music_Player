@@ -2,6 +2,7 @@ import React from "react";
 import { FlatList, Pressable, StyleSheet, View } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { IconButton } from "@/src/components/ui/icon-button";
 import { Text } from "@/src/components/ui/text";
 import { useTheme } from "@/src/theme/provider";
 
@@ -42,6 +43,7 @@ function TableHeader({ onSort, sortColumn, sortDirection }: TableHeaderProps) {
     { key: "bpm", label: "BPM", width: 60 },
     { key: "genre", label: "Genre", width: 100 },
     { key: "tags", label: "Tags", width: 200 },
+    { key: "actions", label: "", width: 60 },
   ];
 
   return (
@@ -97,7 +99,7 @@ function TableRow({
     );
   };
 
-  const formatDuration = (durationMs?: number) => {
+  const formatDuration = (durationMs?: number | null) => {
     if (!durationMs) return "0:00";
     const totalSeconds = Math.floor(durationMs / 1000);
     const minutes = Math.floor(totalSeconds / 60);
@@ -207,6 +209,28 @@ function TableRow({
           <Text style={[styles.tagText, { color: tokens.colors.subtleText }]}>
             +{track.tags.length - 3}
           </Text>
+        )}
+      </View>
+
+      {/* Actions */}
+      <View style={[styles.cell, { width: 60, alignItems: "center" }]}>
+        {onDelete && (
+          <IconButton
+            size="sm"
+            tone="danger"
+            icon={
+              <IconSymbol
+                name="trash"
+                size={16}
+                color={tokens.colors.danger}
+              />
+            }
+            onPress={(e) => {
+              e.stopPropagation();
+              onDelete(track);
+            }}
+            accessibilityLabel={`Delete ${track.title}`}
+          />
         )}
       </View>
     </Pressable>
