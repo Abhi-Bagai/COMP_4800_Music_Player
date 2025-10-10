@@ -110,12 +110,21 @@ export class FileScanner {
     return MUSIC_EXTENSIONS.includes(extension);
   }
 
-  private async convertToDataUri(file: MusicFile): Promise<string> {
+  private async convertToDataUri(file: MusicFile & { file?: File }): Promise<string> {
     if (Platform.OS !== 'web') {
       return file.uri;
     }
 
     try {
+      // If we have a File object directly (from folder selection), use it
+      if (file.file) {
+        const base64 = await this.fileToBase64(file.file);
+        const extension = this.getFileExtension(file.name);
+        const mime = MIME_TYPES_BY_EXTENSION[extension] || file.file.type || 'audio/mpeg';
+        return `data:${mime};base64,${base64}`;
+      }
+
+      // Otherwise, fetch from URI (for individual file selection)
       const response = await fetch(file.uri);
       const blob = await response.blob();
       const base64 = await this.blobToBase64(blob);
@@ -126,6 +135,23 @@ export class FileScanner {
       console.warn(`Failed to convert ${file.name} to data URI:`, error);
       return file.uri;
     }
+  }
+
+  private async fileToBase64(file: File): Promise<string> {
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result;
+        if (typeof result === 'string') {
+          const base64 = result.split(',')[1] ?? result;
+          resolve(base64);
+        } else {
+          reject(new Error('Unable to convert file to base64'));
+        }
+      };
+      reader.onerror = () => reject(reader.error ?? new Error('FileReader error'));
+      reader.readAsDataURL(file);
+    });
   }
 
   private async blobToBase64(blob: Blob): Promise<string> {
@@ -300,7 +326,7 @@ export class FileScanner {
     return this.extractMetadataFromFilenameFallback(file);
   }
 
-  private async extractMetadataFromFile(file: MusicFile): Promise<{
+  private async extractMetadataFromFile(file: MusicFile & { file?: File }): Promise<{
     artist: string;
     album: string;
     title: string;
@@ -309,10 +335,16 @@ export class FileScanner {
       let fileBuffer: Uint8Array;
       
       if (Platform.OS === 'web') {
-        // For web platform, fetch the file as a blob and convert to Uint8Array
-        const response = await fetch(file.uri);
-        const arrayBuffer = await response.arrayBuffer();
-        fileBuffer = new Uint8Array(arrayBuffer);
+        // If we have a File object directly (from folder selection), use it
+        if (file.file) {
+          const arrayBuffer = await file.file.arrayBuffer();
+          fileBuffer = new Uint8Array(arrayBuffer);
+        } else {
+          // Otherwise, fetch the file as a blob and convert to Uint8Array
+          const response = await fetch(file.uri);
+          const arrayBuffer = await response.arrayBuffer();
+          fileBuffer = new Uint8Array(arrayBuffer);
+        }
       } else {
         // For native platforms, read the file directly
         const fileUri = file.uri;
@@ -329,7 +361,7 @@ export class FileScanner {
 
       // Determine MIME type from file extension
       const extension = this.getFileExtension(file.name);
-      const mimeType = MIME_TYPES_BY_EXTENSION[extension] || 'audio/mpeg';
+      const mimeType = MIME_TYPES_BY_EXTENSION[extension] || (file.file?.type) || 'audio/mpeg';
 
       // Parse metadata using music-metadata library
       const metadata = await MusicMetadata.parseBuffer(fileBuffer, { mimeType });
