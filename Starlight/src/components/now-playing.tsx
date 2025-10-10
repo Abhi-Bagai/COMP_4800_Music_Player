@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { IconButton } from '@/src/components/ui/icon-button';
 import { Text } from '@/src/components/ui/text';
+import { useTrackScrubbing } from '@/src/hooks/use-track-scrubbing';
 import { seekTo, setVolume, skipNext, skipPrevious, togglePlayPause } from '@/src/services/playback-service';
 import { usePlayerStore } from '@/src/state';
 import { useTheme } from '@/src/theme/provider';
@@ -27,8 +28,13 @@ interface NowPlayingProps {
 
 export function NowPlaying({ visible, onClose }: NowPlayingProps) {
   const { tokens } = useTheme();
-  const { activeTrack, isPlaying, positionMs, volume } = usePlayerStore();
+  const { activeTrack, isPlaying, volume } = usePlayerStore();
   const [slideAnim] = useState(new Animated.Value(screenHeight));
+  
+  const { currentDisplayPosition, isScrubbing, wheelProps, formatTime: formatScrubTime } = useTrackScrubbing({
+    sensitivity: 50,
+    debounceMs: 150,
+  });
 
   useEffect(() => {
     Animated.spring(slideAnim, {
@@ -74,7 +80,7 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
   const progressPercentage = (() => {
     const duration = activeTrack?.durationMs ?? 0;
     if (!Number.isFinite(duration) || duration <= 0) return 0;
-    const pct = (positionMs / duration) * 100;
+    const pct = (currentDisplayPosition / duration) * 100;
     if (!Number.isFinite(pct)) return 0;
     return Math.min(Math.max(pct, 0), 100);
   })();
@@ -108,16 +114,16 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
             {/* Header */}
             <View style={styles.header}>
               <IconButton
-                icon={<IconSymbol name="chevron.down" size={24} color={tokens.colors.onSurface} />}
+                icon={<IconSymbol name="chevron.down" size={24} color={tokens.colors.text} />}
                 onPress={onClose}
                 accessibilityLabel="Close"
               />
               <View style={styles.headerInfo}>
-                <Text style={[styles.headerTitle, { color: tokens.colors.onSurface }]}>Now Playing</Text>
-                <Text style={[styles.headerSubtitle, { color: tokens.colors.subtle }]}>From Your Library</Text>
+                <Text style={[styles.headerTitle, { color: tokens.colors.text }]}>Now Playing</Text>
+                <Text style={[styles.headerSubtitle, { color: tokens.colors.subtleText }]}>From Your Library</Text>
               </View>
               <IconButton
-                icon={<IconSymbol name="ellipsis" size={24} color={tokens.colors.onSurface} />}
+                icon={<IconSymbol name="ellipsis" size={24} color={tokens.colors.text} />}
                 accessibilityLabel="More options"
               />
             </View>
@@ -138,16 +144,32 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
 
             {/* Track Info */}
             <View style={styles.trackInfo}>
-              <Text style={[styles.trackTitle, { color: tokens.colors.onSurface }]} numberOfLines={1}>
+              <Text style={[styles.trackTitle, { color: tokens.colors.text }]} numberOfLines={1}>
                 {activeTrack.title}
               </Text>
-              <Text style={[styles.artistName, { color: tokens.colors.subtle }]} numberOfLines={1}>
+              <Text style={[styles.artistName, { color: tokens.colors.subtleText }]} numberOfLines={1}>
                 {activeTrack.artist?.name ?? 'Unknown Artist'}
               </Text>
             </View>
 
             {/* Progress Bar */}
-            <View style={styles.progressContainer}>
+            <View style={styles.progressContainer} {...wheelProps as any}>
+              {isScrubbing && (
+                <View 
+                  style={[
+                    styles.scrubTooltip, 
+                    { 
+                      backgroundColor: tokens.colors.surface,
+                      left: `${progressPercentage}%`,
+                      shadowColor: tokens.colors.text,
+                    }
+                  ]}
+                >
+                  <Text style={[styles.scrubTooltipText, { color: tokens.colors.text }]}>
+                    {formatScrubTime(currentDisplayPosition)}
+                  </Text>
+                </View>
+              )}
               <Slider
                 style={styles.progressBar}
                 minimumValue={0}
@@ -159,8 +181,8 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
                 thumbTintColor={tokens.colors.primary}
               />
               <View style={styles.timeLabels}>
-                <Text style={[styles.timeText, { color: tokens.colors.subtle }]}>{formatTime(positionMs)}</Text>
-                <Text style={[styles.timeText, { color: tokens.colors.subtle }]}>
+                <Text style={[styles.timeText, { color: tokens.colors.subtleText }]}>{formatTime(currentDisplayPosition)}</Text>
+                <Text style={[styles.timeText, { color: tokens.colors.subtleText }]}>
                   {formatTime(activeTrack.durationMs || 0)}
                 </Text>
               </View>
@@ -169,7 +191,7 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
             {/* Playback Controls */}
             <View style={styles.controls}>
               <IconButton
-                icon={<IconSymbol name="backward.fill" size={32} color={tokens.colors.onSurface} />}
+                icon={<IconSymbol name="backward.fill" size={32} color={tokens.colors.text} />}
                 onPress={skipPrevious}
                 accessibilityLabel="Previous track"
               />
@@ -187,7 +209,7 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
               </Pressable>
 
               <IconButton
-                icon={<IconSymbol name="forward.fill" size={32} color={tokens.colors.onSurface} />}
+                icon={<IconSymbol name="forward.fill" size={32} color={tokens.colors.text} />}
                 onPress={skipNext}
                 accessibilityLabel="Next track"
               />
@@ -195,7 +217,7 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
 
             {/* Volume Control */}
             <View style={styles.volumeContainer}>
-              <IconSymbol name="speaker.fill" size={16} color={tokens.colors.subtle} />
+              <IconSymbol name="speaker.fill" size={16} color={tokens.colors.subtleText} />
               <Slider
                 style={styles.volumeSlider}
                 minimumValue={0}
@@ -206,21 +228,21 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
                 maximumTrackTintColor={tokens.colors.surfaceElevated}
                 thumbTintColor={tokens.colors.primary}
               />
-              <IconSymbol name="speaker.wave.3.fill" size={16} color={tokens.colors.subtle} />
+              <IconSymbol name="speaker.wave.3.fill" size={16} color={tokens.colors.subtleText} />
             </View>
 
             {/* Bottom Actions */}
             <View style={styles.bottomActions}>
               <IconButton
-                icon={<IconSymbol name="quote.bubble" size={24} color={tokens.colors.subtle} />}
+                icon={<IconSymbol name="quote.bubble" size={24} color={tokens.colors.subtleText} />}
                 accessibilityLabel="Lyrics"
               />
               <IconButton
-                icon={<IconSymbol name="airplayaudio" size={24} color={tokens.colors.subtle} />}
+                icon={<IconSymbol name="airplayaudio" size={24} color={tokens.colors.subtleText} />}
                 accessibilityLabel="AirPlay"
               />
               <IconButton
-                icon={<IconSymbol name="list.bullet" size={24} color={tokens.colors.subtle} />}
+                icon={<IconSymbol name="list.bullet" size={24} color={tokens.colors.subtleText} />}
                 accessibilityLabel="Up next"
               />
             </View>
@@ -304,6 +326,7 @@ const styles = StyleSheet.create({
   progressContainer: {
     paddingHorizontal: 24,
     marginBottom: 24,
+    position: 'relative',
   },
   progressBar: {
     width: '100%',
@@ -321,6 +344,23 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  scrubTooltip: {
+    position: 'absolute',
+    top: -40,
+    transform: [{ translateX: -20 }],
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 1000,
+  },
+  scrubTooltipText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   // Controls

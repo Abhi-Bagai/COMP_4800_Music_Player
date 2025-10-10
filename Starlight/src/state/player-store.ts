@@ -14,10 +14,12 @@ interface PlayerState {
   positionMs: number;
   volume: number;
   isMuted: boolean;
+  scrubbingPositionMs: number | null;
   setQueue: (queue: QueueItem[]) => void;
   setActiveTrack: (track: LibraryTrack | null) => void;
   setPlaybackStatus: (status: { isPlaying?: boolean; positionMs?: number }) => void;
   setVolume: (volume: number, isMuted?: boolean) => void;
+  setScrubbingPosition: (positionMs: number | null) => void;
 }
 
 export const usePlayerStore = create<PlayerState>((set) => ({
@@ -27,6 +29,7 @@ export const usePlayerStore = create<PlayerState>((set) => ({
   positionMs: 0,
   volume: 1,
   isMuted: false,
+  scrubbingPositionMs: null,
   setQueue: (queue) => set({ queue }),
   setActiveTrack: (track) => set({ activeTrack: track }),
   setPlaybackStatus: ({ isPlaying, positionMs }) =>
@@ -39,4 +42,5 @@ export const usePlayerStore = create<PlayerState>((set) => ({
       volume,
       isMuted: isMuted ?? prev.isMuted,
     })),
+  setScrubbingPosition: (scrubbingPositionMs) => set({ scrubbingPositionMs }),
 }));

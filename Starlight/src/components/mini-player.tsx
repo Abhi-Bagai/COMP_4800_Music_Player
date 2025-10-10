@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Button } from "@/src/components/ui/button";
 import { Text } from "@/src/components/ui/text";
+import { useTrackScrubbing } from "@/src/hooks/use-track-scrubbing";
 import {
   skipNext,
   skipPrevious,
@@ -19,7 +20,12 @@ interface MiniPlayerProps {
 
 export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
   const { tokens } = useTheme();
-  const { activeTrack, isPlaying, positionMs } = usePlayerStore();
+  const { activeTrack, isPlaying } = usePlayerStore();
+
+  const { currentDisplayPosition, isScrubbing, wheelProps, formatTime: formatScrubTime } = useTrackScrubbing({
+    sensitivity: 50,
+    debounceMs: 150,
+  });
 
   if (!activeTrack) return null;
 
@@ -31,7 +37,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
   const progressPercentage = (() => {
     const duration = activeTrack.durationMs ?? 0;
     if (!Number.isFinite(duration) || duration <= 0) return 0;
-    const pct = (positionMs / duration) * 100;
+    const pct = (currentDisplayPosition / duration) * 100;
     if (!Number.isFinite(pct)) return 0;
     return Math.min(Math.max(pct, 0), 100);
   })();
@@ -46,7 +52,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
     return `${minutes}:${seconds}`;
   };
 
-  const remaining = Math.max((activeTrack.durationMs ?? 0) - positionMs, 0);
+  const remaining = Math.max((activeTrack.durationMs ?? 0) - currentDisplayPosition, 0);
 
   return (
     <View
@@ -90,11 +96,27 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
 
         {/* Center - Progress and Controls */}
         <View style={styles.centerSection}>
-          <View style={styles.progressContainer}>
+          <View style={styles.progressContainer} {...wheelProps as any}>
+            {isScrubbing && (
+              <View 
+                style={[
+                  styles.scrubTooltip, 
+                  { 
+                    backgroundColor: tokens.colors.surfaceElevated,
+                    left: `${progressPercentage}%`,
+                    shadowColor: tokens.colors.text,
+                  }
+                ]}
+              >
+                <Text style={[styles.scrubTooltipText, { color: tokens.colors.text }]}>
+                  {formatScrubTime(currentDisplayPosition)}
+                </Text>
+              </View>
+            )}
             <Text
               style={[styles.timeText, { color: tokens.colors.subtleText }]}
             >
-              {formatTime(positionMs)}
+              {formatTime(currentDisplayPosition)}
             </Text>
             <View
               style={[
@@ -252,6 +274,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "100%",
     gap: 12,
+    position: "relative",
   },
   timeText: {
     fontSize: 12,
@@ -298,5 +321,22 @@ const styles = StyleSheet.create({
   },
   volumeFill: {
     height: "100%",
+  },
+  scrubTooltip: {
+    position: "absolute",
+    top: -35,
+    transform: [{ translateX: -25 }],
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 1000,
+  },
+  scrubTooltipText: {
+    fontSize: 12,
+    fontWeight: "600",
   },
 });
