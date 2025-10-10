@@ -12,6 +12,7 @@ import {
   idbRemoveTrackFromPlaylist,
   idbDeletePlaylist,
   idbUpdatePlaylist,
+  idbClearPlaylists,
 } from './indexeddb';
 
 export interface CreatePlaylistData {
@@ -151,7 +152,22 @@ export async function getPlaylistWithTracks(playlistId: string): Promise<Playlis
 
   if (!result) return null;
 
-  return result as PlaylistWithTracks;
+  return {
+    ...result,
+    tracks: result.playlistTracks.map(pt => ({
+      id: pt.id,
+      position: pt.position,
+      addedAt: pt.addedAt,
+      track: {
+        id: pt.track.id,
+        title: pt.track.title,
+        artist: pt.track.artist,
+        album: pt.track.album,
+        durationMs: pt.track.durationMs,
+        fileUri: pt.track.fileUri,
+      }
+    }))
+  } as PlaylistWithTracks;
 }
 
 export async function addTrackToPlaylist(playlistId: string, trackId: string): Promise<void> {
@@ -227,4 +243,16 @@ export async function updatePlaylist(playlistId: string, data: Partial<CreatePla
       updatedAt: new Date(),
     })
     .where(eq(schema.playlists.id, playlistId));
+}
+
+export async function clearAllPlaylists(): Promise<void> {
+  if (Platform.OS === 'web') {
+    await idbClearPlaylists();
+    return;
+  }
+  const db = await getDb();
+  await db.transaction(async (tx) => {
+    await tx.delete(schema.playlistTracks);
+    await tx.delete(schema.playlists);
+  });
 }

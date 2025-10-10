@@ -515,6 +515,15 @@ export async function idbDeletePlaylist(playlistId: string) {
   });
 }
 
+export async function idbClearPlaylists() {
+  await withStores(['playlists', 'playlist_tracks'], 'readwrite', async ({ playlists, playlist_tracks }) => {
+    await Promise.all([
+      requestToPromise(playlists.clear()),
+      requestToPromise(playlist_tracks.clear()),
+    ]);
+  });
+}
+
 export async function idbGetAllPlaylists() {
   return await withStores(['playlists'], 'readonly', async ({ playlists }) => {
     const rows = await getAllFromStore<PlaylistRecord>(playlists);
