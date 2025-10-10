@@ -28,7 +28,6 @@ export function DropdownMenu({ trigger, items }: DropdownMenuProps) {
   const [visible, setVisible] = useState(false);
 
   const handleTriggerPress = () => {
-    console.log('🔧 GEAR BUTTON CLICKED - Dropdown trigger pressed');
     setVisible(true);
   };
 
