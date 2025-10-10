@@ -1,6 +1,7 @@
 import { checkTrackExists } from '@/src/db';
 import * as FileSystem from 'expo-file-system';
 import { Platform } from 'react-native';
+import * as MusicMetadata from 'music-metadata';
 
 import { upsertLibrary, type LibraryBatchUpsert } from './library-service';
 
@@ -185,8 +186,8 @@ export class FileScanner {
         });
 
         try {
-          // Extract metadata from filename (basic implementation)
-          const metadata = this.extractMetadataFromFilename(file);
+          // Extract metadata from filename (now with proper audio metadata library)
+          const metadata = await this.extractMetadataFromFilename(file);
           const sanitizedTitle = this.sanitizeString(metadata.title);
           const sanitizedArtist = this.sanitizeString(metadata.artist);
 
@@ -279,13 +280,82 @@ export class FileScanner {
     }
   }
 
-  private extractMetadataFromFilename(file: MusicFile): {
+  private async extractMetadataFromFilename(file: MusicFile): Promise<{
+    artist: string;
+    album: string;
+    title: string;
+  }> {
+    try {
+      // First try to extract metadata from the actual audio file
+      const metadata = await this.extractMetadataFromFile(file);
+      if (metadata) {
+        return metadata;
+      }
+    } catch (error) {
+      console.warn(`Failed to extract metadata from file ${file.name}:`, error);
+    }
+
+    // Fallback to filename parsing if metadata extraction fails
+    console.log("Fallback to filename parsing");
+    return this.extractMetadataFromFilenameFallback(file);
+  }
+
+  private async extractMetadataFromFile(file: MusicFile): Promise<{
+    artist: string;
+    album: string;
+    title: string;
+  } | null> {
+    try {
+      let fileBuffer: Uint8Array;
+      
+      if (Platform.OS === 'web') {
+        // For web platform, fetch the file as a blob and convert to Uint8Array
+        const response = await fetch(file.uri);
+        const arrayBuffer = await response.arrayBuffer();
+        fileBuffer = new Uint8Array(arrayBuffer);
+      } else {
+        // For native platforms, read the file directly
+        const fileUri = file.uri;
+        const base64Data = await FileSystem.readAsStringAsync(fileUri, {
+          encoding: 'base64',
+        });
+        // Convert base64 to Uint8Array for native platforms
+        const binaryString = atob(base64Data);
+        fileBuffer = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          fileBuffer[i] = binaryString.charCodeAt(i);
+        }
+      }
+
+      // Determine MIME type from file extension
+      const extension = this.getFileExtension(file.name);
+      const mimeType = MIME_TYPES_BY_EXTENSION[extension] || 'audio/mpeg';
+
+      // Parse metadata using music-metadata library
+      const metadata = await MusicMetadata.parseBuffer(fileBuffer, { mimeType });
+
+      console.log("Metadata:", metadata);
+      console.log("Common:", metadata.common);
+
+      return {
+        artist: metadata.common.artist || 'Unknown Artist',
+        album: metadata.common.album || 'Unknown Album',
+        title: metadata.common.title || this.getFallbackTitle(file.name),
+      };
+    } catch (error) {
+      console.warn(`Error parsing metadata for ${file.name}:`, error);
+      return null;
+    }
+  }
+
+  private extractMetadataFromFilenameFallback(file: MusicFile): {
     artist: string;
     album: string;
     title: string;
   } {
-    // Basic metadata extraction from filename
-    // This is a simple implementation - in a real app you'd use a proper audio metadata library
+    // Basic metadata extraction from filename (original implementation)
+    console.log("Extracting metadata from filename fallback");
+    console.log("File being scanned:", file);
     const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
     
     // Try to parse common patterns like "Artist - Album - Title" or "Artist - Title"
@@ -310,6 +380,11 @@ export class FileScanner {
         title: nameWithoutExt,
       };
     }
+  }
+
+  private getFallbackTitle(filename: string): string {
+    const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
+    return nameWithoutExt;
   }
 
   private generateId(input: string): string {
