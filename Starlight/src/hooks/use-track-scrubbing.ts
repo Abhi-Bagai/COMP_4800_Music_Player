@@ -55,7 +55,6 @@ export function useTrackScrubbing(options: UseTrackScrubbingOptions = {}) {
           // End scrubbing: seek to the scrubbed position
           const finalPosition = usePlayerStore.getState().scrubbingPositionMs;
           if (finalPosition !== null) {
-            console.log('Scrubbing ended, seeking to:', finalPosition);
             await seekTo(finalPosition);
             setScrubbingPosition(null);
           }
@@ -69,11 +68,9 @@ export function useTrackScrubbing(options: UseTrackScrubbingOptions = {}) {
     (element: HTMLElement | null) => {
       if (!element || Platform.OS !== 'web') return;
 
-      console.log('Attaching wheel listener to element:', element);
       element.addEventListener('wheel', handleWheel as any, { passive: false });
 
       return () => {
-        console.log('Removing wheel listener from element');
         element.removeEventListener('wheel', handleWheel as any);
         if (scrubEndTimeoutRef.current) {
           clearTimeout(scrubEndTimeoutRef.current);
