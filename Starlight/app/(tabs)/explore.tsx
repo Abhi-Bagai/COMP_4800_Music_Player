@@ -55,10 +55,10 @@ export default function NowPlayingScreen() {
               style={[
                 styles.timelineProgress,
                 {
-                  width: `${timelineProgressPercent(
+                  width: timelineProgressPercent(
                     safePosition,
                     durationMs
-                  )}%`,
+                  ) as any,
                   backgroundColor: tokens.colors.primary,
                 },
               ]}
@@ -74,6 +74,7 @@ export default function NowPlayingScreen() {
               <IconSymbol
                 name="chevron.right"
                 size={20}
+                color={tokens.colors.primary}
                 style={styles.prevIcon}
               />
             }
@@ -149,7 +150,7 @@ function formatTime(ms?: number) {
 }
 
 function timelineProgressPercent(positionMs: number, durationMs: number) {
-  if (!Number.isFinite(durationMs) || durationMs <= 0) return 0;
+  if (!Number.isFinite(durationMs) || durationMs <= 0) return "0%";
   const raw = positionMs / durationMs;
   const percent = Number.isFinite(raw) ? Math.min(Math.max(raw, 0), 1) : 0;
   return Number((percent * 100).toFixed(1));
