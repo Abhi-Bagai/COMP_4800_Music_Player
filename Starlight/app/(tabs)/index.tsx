@@ -26,6 +26,7 @@ import { Button } from "@/src/components/ui/button";
 import { DropdownMenu } from "@/src/components/ui/dropdown-menu";
 import { IconButton } from "@/src/components/ui/icon-button";
 import { Text } from "@/src/components/ui/text";
+import { StarlightLogo } from "@/src/components/starlight-logo";
 import {
   clearLibrary,
   deleteTrack,
@@ -264,9 +265,11 @@ export default function HomeScreen() {
         ]}
       >
         <View style={styles.headerContent}>
-          <Text style={[styles.appTitle, { color: tokens.colors.primary }]}>
-            STARLIGHT
-          </Text>
+          <StarlightLogo 
+            width={130} 
+            height={25} 
+            color={tokens.colors.primary} 
+          />
           <View style={styles.headerActions}>
             <Button
               size="sm"
@@ -547,11 +550,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-  },
-  appTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    letterSpacing: 2,
   },
   addMusicButton: {
     flexDirection: "row",
