@@ -33,7 +33,10 @@ import {
   hydrateLibraryFromDatabase,
 } from "@/src/services/library-service";
 import { playTrack } from "@/src/services/playback-service";
-import { hydratePlaylistsFromDatabase, clearAllPlaylistsService } from "@/src/services/playlist-service";
+import {
+  hydratePlaylistsFromDatabase,
+  clearAllPlaylistsService,
+} from "@/src/services/playlist-service";
 import { useLibraryStore, usePlayerStore, usePlaylistStore } from "@/src/state";
 import { useTheme } from "@/src/theme/provider";
 
@@ -131,7 +134,7 @@ export default function HomeScreen() {
   };
 
   const handleClearLibrary = async () => {
-    console.log('handleClearLibrary called');
+    console.log("handleClearLibrary called");
     // Web Alert has only one button, so use confirm dialog instead
     if (Platform.OS === "web") {
       const confirmed =
@@ -177,7 +180,7 @@ export default function HomeScreen() {
   };
 
   const handleClearAllPlaylists = async () => {
-    console.log('handleClearAllPlaylists called');
+    console.log("handleClearAllPlaylists called");
     // Web Alert has only one button, so use confirm dialog instead
     if (Platform.OS === "web") {
       const confirmed =
@@ -265,10 +268,10 @@ export default function HomeScreen() {
         ]}
       >
         <View style={styles.headerContent}>
-          <StarlightLogo 
-            width={130} 
-            height={25} 
-            color={tokens.colors.primary} 
+          <StarlightLogo
+            width={130}
+            height={25}
+            color={tokens.colors.primary}
           />
           <View style={styles.headerActions}>
             <Button
@@ -361,6 +364,24 @@ export default function HomeScreen() {
                 onTrackAddToPlaylist={(track) =>
                   handleAddToPlaylist(tracks.find((t) => t.id === track.id)!)
                 }
+                onTrackShowPlaylists={(track) => {
+                  // TODO: Implement show playlists functionality
+                  console.log("Show playlists for track:", track.title);
+                }}
+                onBulkDelete={(tracks) => {
+                  console.log(
+                    "Bulk delete tracks:",
+                    tracks.map((t) => t.title)
+                  );
+                  // TODO: Implement bulk delete functionality
+                }}
+                onBulkAddToPlaylist={(tracks) => {
+                  console.log(
+                    "Bulk add to playlist tracks:",
+                    tracks.map((t) => t.title)
+                  );
+                  // TODO: Implement bulk add to playlist functionality
+                }}
               />
             ) : (
               <View style={styles.emptyState}>
@@ -484,11 +505,16 @@ export default function HomeScreen() {
         animationType="fade"
         onRequestClose={() => setShowGearMenu(false)}
       >
-        <Pressable 
-          style={styles.gearMenuBackdrop} 
+        <Pressable
+          style={styles.gearMenuBackdrop}
           onPress={() => setShowGearMenu(false)}
         >
-          <View style={[styles.gearMenu, { backgroundColor: tokens.colors.surface }]}>
+          <View
+            style={[
+              styles.gearMenu,
+              { backgroundColor: tokens.colors.surface },
+            ]}
+          >
             <Pressable
               style={styles.gearMenuItem}
               onPress={() => {
@@ -498,9 +524,18 @@ export default function HomeScreen() {
             >
               <View style={styles.gearMenuItemContent}>
                 <View style={styles.gearMenuItemIcon}>
-                  <IconSymbol name="trash" size={16} color={tokens.colors.danger} />
+                  <IconSymbol
+                    name="trash"
+                    size={16}
+                    color={tokens.colors.danger}
+                  />
                 </View>
-                <Text style={[styles.gearMenuItemText, { color: tokens.colors.danger }]}>
+                <Text
+                  style={[
+                    styles.gearMenuItemText,
+                    { color: tokens.colors.danger },
+                  ]}
+                >
                   Delete All Songs
                 </Text>
               </View>
@@ -514,9 +549,18 @@ export default function HomeScreen() {
             >
               <View style={styles.gearMenuItemContent}>
                 <View style={styles.gearMenuItemIcon}>
-                  <IconSymbol name="trash" size={16} color={tokens.colors.danger} />
+                  <IconSymbol
+                    name="trash"
+                    size={16}
+                    color={tokens.colors.danger}
+                  />
                 </View>
-                <Text style={[styles.gearMenuItemText, { color: tokens.colors.danger }]}>
+                <Text
+                  style={[
+                    styles.gearMenuItemText,
+                    { color: tokens.colors.danger },
+                  ]}
+                >
                   Delete All Playlists
                 </Text>
               </View>
@@ -626,15 +670,15 @@ const styles = StyleSheet.create({
   // Gear Menu Styles
   gearMenuBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    backgroundColor: "rgba(0, 0, 0, 0.1)",
   },
   gearMenu: {
-    position: 'absolute',
+    position: "absolute",
     top: 80,
     right: 20,
     width: 200,
     borderRadius: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 4,
@@ -643,26 +687,26 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
   gearMenuItem: {
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomColor: "rgba(255, 255, 255, 0.05)",
   },
   gearMenuItemContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   gearMenuItemIcon: {
     width: 20,
-    alignItems: 'center',
+    alignItems: "center",
     marginRight: 12,
   },
   gearMenuItemText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 });
 

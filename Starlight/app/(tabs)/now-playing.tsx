@@ -86,7 +86,13 @@ export default function NowPlayingScreen() {
             {isPlaying ? "Pause" : "Play"}
           </Button>
           <IconButton
-            icon={<IconSymbol name="chevron.right" size={20} />}
+            icon={
+              <IconSymbol
+                name="chevron.right"
+                size={20}
+                color={tokens.colors.primary}
+              />
+            }
             accessibilityLabel="Next track"
             tone="primary"
             onPress={() => {}}
