@@ -6,6 +6,7 @@ import {
   View,
   Modal,
   Platform,
+  ScrollView,
 } from "react-native";
 import { PanGestureHandler } from "react-native-gesture-handler";
 
@@ -423,7 +424,10 @@ function TableRow({
             break;
           case "time":
             content = (
-              <Text style={[styles.cellText, { color: tokens.colors.text }]}>
+              <Text 
+                style={[styles.cellText, { color: tokens.colors.text }]}
+                numberOfLines={1}
+              >
                 {formatDuration(track.durationMs)}
               </Text>
             );
@@ -450,7 +454,10 @@ function TableRow({
             break;
           case "bpm":
             content = (
-              <Text style={[styles.cellText, { color: tokens.colors.text }]}>
+              <Text 
+                style={[styles.cellText, { color: tokens.colors.text }]}
+                numberOfLines={1}
+              >
                 {track.bpm ?? "N/A"}
               </Text>
             );
@@ -467,7 +474,12 @@ function TableRow({
             break;
           case "tags":
             content = (
-              <>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                style={{ flex: 1 }}
+                contentContainerStyle={{ alignItems: 'center', gap: 4 }}
+              >
                 {track.tags?.slice(0, 3).map((tag, tagIndex) => (
                   <View
                     key={tagIndex}
@@ -481,6 +493,7 @@ function TableRow({
                         styles.tagText,
                         { color: tokens.colors.subtleText },
                       ]}
+                      numberOfLines={1}
                     >
                       {tag}
                     </Text>
@@ -492,11 +505,12 @@ function TableRow({
                       styles.tagText,
                       { color: tokens.colors.subtleText },
                     ]}
+                    numberOfLines={1}
                   >
                     +{track.tags.length - 3}
                   </Text>
                 )}
-              </>
+              </ScrollView>
             );
             break;
           case "actions":
@@ -533,7 +547,7 @@ function TableRow({
                   ? { alignItems: "center" }
                   : {},
                 column.key === "tags"
-                  ? { flexDirection: "row", flexWrap: "wrap", gap: 4 }
+                  ? { flexDirection: "row", gap: 4 }
                   : {},
               ]}
             >
