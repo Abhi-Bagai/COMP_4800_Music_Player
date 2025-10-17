@@ -1,11 +1,9 @@
-import { PropsWithChildren, useMemo } from 'react';
-import { Pressable, PressableProps, StyleSheet, View } from 'react-native';
+import { Button as RNRButton, ButtonProps as RNRButtonProps } from '@/components/ui/button';
+import { PropsWithChildren } from 'react';
+import { PressableProps } from 'react-native';
 
-import { Text } from './text';
-import { useTheme } from '@/src/theme/provider';
-
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
-export type ButtonSize = 'sm' | 'md' | 'lg';
+export type ButtonVariant = 'primary' | 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+export type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';
 
 export interface ButtonProps extends PropsWithChildren<PressableProps> {
   variant?: ButtonVariant;
@@ -13,102 +11,54 @@ export interface ButtonProps extends PropsWithChildren<PressableProps> {
   icon?: React.ReactNode;
 }
 
+// Map old variants to new variants
+const mapVariant = (variant: ButtonVariant): RNRButtonProps['variant'] => {
+  switch (variant) {
+    case 'primary':
+      return 'default';
+    case 'secondary':
+      return 'secondary';
+    case 'ghost':
+      return 'ghost';
+    default:
+      return variant as RNRButtonProps['variant'];
+  }
+};
+
+// Map old sizes to new sizes
+const mapSize = (size: ButtonSize): RNRButtonProps['size'] => {
+  switch (size) {
+    case 'sm':
+      return 'sm';
+    case 'md':
+      return 'default';
+    case 'lg':
+      return 'lg';
+    default:
+      return size as RNRButtonProps['size'];
+  }
+};
+
 export function Button({
   children,
   variant = 'primary',
   size = 'md',
   icon,
-  style,
-  disabled,
   ...rest
 }: ButtonProps) {
-  const { tokens } = useTheme();
-
-  const { paddingY, paddingX, textVariant } = useMemo(() => {
-    switch (size) {
-      case 'sm':
-        return { paddingY: tokens.spacing.xs, paddingX: tokens.spacing.sm, textVariant: 'caption' as const };
-      case 'lg':
-        return { paddingY: tokens.spacing.md, paddingX: tokens.spacing.xl, textVariant: 'subtitle' as const };
-      default:
-        return { paddingY: tokens.spacing.sm, paddingX: tokens.spacing.lg, textVariant: 'body' as const };
-    }
-  }, [size, tokens.spacing.lg, tokens.spacing.md, tokens.spacing.sm, tokens.spacing.xl, tokens.spacing.xs]);
-
-  const baseColors = useMemo(() => {
-    switch (variant) {
-      case 'secondary':
-        return {
-          backgroundColor: tokens.colors.secondary,
-          textColor: tokens.colors.onSecondary,
-          pressed: tokens.colors.secondary,
-        };
-      case 'ghost':
-        return {
-          backgroundColor: 'transparent',
-          textColor: tokens.colors.text,
-          pressed: tokens.colors.surfaceElevated,
-        };
-      default:
-        return {
-          backgroundColor: tokens.colors.primary,
-          textColor: tokens.colors.onPrimary,
-          pressed: tokens.colors.primaryMuted,
-        };
-    }
-  }, [tokens.colors]);
+  const mappedVariant = mapVariant(variant);
+  const mappedSize = mapSize(size);
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      style={({ pressed }) => [
-        styles.button,
-        {
-          backgroundColor: pressed ? baseColors.pressed : baseColors.backgroundColor,
-          paddingVertical: paddingY,
-          paddingHorizontal: paddingX,
-          opacity: disabled ? 0.6 : 1,
-          borderRadius: tokens.radius.md,
-        },
-        variant === 'ghost' && styles.ghostBorder,
-        style,
-      ]}
-      disabled={disabled}
+    <RNRButton
+      variant={mappedVariant}
+      size={mappedSize}
       {...rest}
     >
-      <View style={styles.content}>
-        {icon && <View style={[styles.icon, { marginRight: tokens.spacing.xs }]}>{icon}</View>}
-        {typeof children === 'string' ? (
-          <Text variant={textVariant} tone={variant === 'ghost' ? 'default' : 'default'} weight="medium" style={styles.label}>
-            {children}
-          </Text>
-        ) : (
-          children
-        )}
-      </View>
-    </Pressable>
+      {icon && icon}
+      {children}
+    </RNRButton>
   );
 }
 
-const styles = StyleSheet.create({
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  icon: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  label: {
-    textAlign: 'center',
-  },
-  ghostBorder: {
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-});
+// Styles removed - now using React Native Reusables styling

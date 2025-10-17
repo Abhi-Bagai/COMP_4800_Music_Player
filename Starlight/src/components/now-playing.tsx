@@ -263,7 +263,6 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 12,
-    marginTop: 2,
   },
 
   // Artwork

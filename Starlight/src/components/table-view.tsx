@@ -6,6 +6,7 @@ import {
   View,
   Modal,
   Platform,
+  ScrollView,
 } from "react-native";
 import { PanGestureHandler } from "react-native-gesture-handler";
 
@@ -66,10 +67,8 @@ function TableHeader({
 
   return (
     <View
-      style={[
-        styles.header,
-        { backgroundColor: tokens.colors.surfaceElevated },
-      ]}
+      style={[styles.header]}
+      className="flex-row py-3 px-4 border-b border-border bg-card"
     >
       {columns.map((column, index) => {
         const isAllSelected =
@@ -326,6 +325,7 @@ function TableRow({
 }: TableRowProps) {
   const { tokens } = useTheme();
   const [isHovered, setIsHovered] = React.useState(false);
+  const [isPressed, setIsPressed] = React.useState(false);
 
   const getSourceIcon = () => {
     // You can customize this based on track source
@@ -355,19 +355,13 @@ function TableRow({
 
   return (
     <Pressable
-      style={({ pressed }) => [
-        styles.row,
-        {
-          backgroundColor: pressed
-            ? tokens.colors.surfaceElevated
-            : isHovered
-            ? tokens.colors.surfaceElevated
-            : "transparent",
-        },
-      ]}
+      style={[styles.row]}
+      className={`${isPressed ? 'bg-card' : isHovered ? 'bg-card' : 'bg-transparent'}`}
       onPress={() => onPress(track)}
       onLongPress={handleLongPress}
       delayLongPress={500}
+      onPressIn={() => setIsPressed(true)}
+      onPressOut={() => setIsPressed(false)}
       onHoverIn={Platform.OS === "web" ? () => setIsHovered(true) : undefined}
       onHoverOut={Platform.OS === "web" ? () => setIsHovered(false) : undefined}
     >
@@ -430,7 +424,10 @@ function TableRow({
             break;
           case "time":
             content = (
-              <Text style={[styles.cellText, { color: tokens.colors.text }]}>
+              <Text 
+                style={[styles.cellText, { color: tokens.colors.text }]}
+                numberOfLines={1}
+              >
                 {formatDuration(track.durationMs)}
               </Text>
             );
@@ -457,7 +454,10 @@ function TableRow({
             break;
           case "bpm":
             content = (
-              <Text style={[styles.cellText, { color: tokens.colors.text }]}>
+              <Text 
+                style={[styles.cellText, { color: tokens.colors.text }]}
+                numberOfLines={1}
+              >
                 {track.bpm ?? "N/A"}
               </Text>
             );
@@ -474,7 +474,12 @@ function TableRow({
             break;
           case "tags":
             content = (
-              <>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                style={{ flex: 1 }}
+                contentContainerStyle={{ alignItems: 'center', gap: 4 }}
+              >
                 {track.tags?.slice(0, 3).map((tag, tagIndex) => (
                   <View
                     key={tagIndex}
@@ -488,6 +493,7 @@ function TableRow({
                         styles.tagText,
                         { color: tokens.colors.subtleText },
                       ]}
+                      numberOfLines={1}
                     >
                       {tag}
                     </Text>
@@ -499,11 +505,12 @@ function TableRow({
                       styles.tagText,
                       { color: tokens.colors.subtleText },
                     ]}
+                    numberOfLines={1}
                   >
                     +{track.tags.length - 3}
                   </Text>
                 )}
-              </>
+              </ScrollView>
             );
             break;
           case "actions":
@@ -540,7 +547,7 @@ function TableRow({
                   ? { alignItems: "center" }
                   : {},
                 column.key === "tags"
-                  ? { flexDirection: "row", flexWrap: "wrap", gap: 4 }
+                  ? { flexDirection: "row", gap: 4 }
                   : {},
               ]}
             >
@@ -703,7 +710,8 @@ export function TableView({
 
   return (
     <View
-      style={[styles.container, { backgroundColor: tokens.colors.background }]}
+      style={[styles.container]}
+      className="flex-1 bg-background"
     >
       <TableHeader
         onSort={handleSort}

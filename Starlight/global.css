@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Dark theme as default - Black background with purple highlights */
+    --background: 0 0% 10%;        /* Very dark background (#1A1A1A) */
+    --foreground: 0 0% 98%;        /* White text */
+    --card: 0 0% 16%;              /* Slightly lighter for cards (#2A2A2A) */
+    --card-foreground: 0 0% 98%;   /* White text on cards */
+    --popover: 0 0% 16%;           /* Same as card for popovers */
+    --popover-foreground: 0 0% 98%; /* White text on popovers */
+    --primary: 270 85% 65%;        /* Purple primary color (#8B5CF6) */
+    --primary-foreground: 0 0% 98%; /* White text on primary */
+    --secondary: 0 0% 23%;         /* Dark gray secondary (#3A3A3A) */
+    --secondary-foreground: 0 0% 98%; /* White text on secondary */
+    --muted: 0 0% 23%;             /* Same as secondary for muted */
+    --muted-foreground: 0 0% 63%;  /* Light gray for muted text */
+    --accent: 270 85% 65%;         /* Purple accent same as primary */
+    --accent-foreground: 0 0% 98%; /* White text on accent */
+    --destructive: 0 84% 60%;      /* Red for destructive actions */
+    --border: 0 0% 25%;            /* Dark gray borders (#404040) */
+    --input: 0 0% 25%;             /* Same as border for inputs */
+    --ring: 270 85% 65%;           /* Purple ring color */
+    --radius: 0.625rem;
+    --chart-1: 270 85% 65%;        /* Purple chart colors */
+    --chart-2: 270 70% 55%;
+    --chart-3: 270 75% 60%;
+    --chart-4: 270 80% 70%;
+    --chart-5: 270 90% 75%;
+  }
+}
