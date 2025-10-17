@@ -66,10 +66,8 @@ function TableHeader({
 
   return (
     <View
-      style={[
-        styles.header,
-        { backgroundColor: tokens.colors.surfaceElevated },
-      ]}
+      style={[styles.header]}
+      className="flex-row py-3 px-4 border-b border-border bg-card"
     >
       {columns.map((column, index) => {
         const isAllSelected =
@@ -326,6 +324,7 @@ function TableRow({
 }: TableRowProps) {
   const { tokens } = useTheme();
   const [isHovered, setIsHovered] = React.useState(false);
+  const [isPressed, setIsPressed] = React.useState(false);
 
   const getSourceIcon = () => {
     // You can customize this based on track source
@@ -355,19 +354,13 @@ function TableRow({
 
   return (
     <Pressable
-      style={({ pressed }) => [
-        styles.row,
-        {
-          backgroundColor: pressed
-            ? tokens.colors.surfaceElevated
-            : isHovered
-            ? tokens.colors.surfaceElevated
-            : "transparent",
-        },
-      ]}
+      style={[styles.row]}
+      className={`${isPressed ? 'bg-card' : isHovered ? 'bg-card' : 'bg-transparent'}`}
       onPress={() => onPress(track)}
       onLongPress={handleLongPress}
       delayLongPress={500}
+      onPressIn={() => setIsPressed(true)}
+      onPressOut={() => setIsPressed(false)}
       onHoverIn={Platform.OS === "web" ? () => setIsHovered(true) : undefined}
       onHoverOut={Platform.OS === "web" ? () => setIsHovered(false) : undefined}
     >
@@ -703,7 +696,8 @@ export function TableView({
 
   return (
     <View
-      style={[styles.container, { backgroundColor: tokens.colors.background }]}
+      style={[styles.container]}
+      className="flex-1 bg-background"
     >
       <TableHeader
         onSort={handleSort}

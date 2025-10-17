@@ -38,10 +38,8 @@ import {
   clearAllPlaylistsService,
 } from "@/src/services/playlist-service";
 import { useLibraryStore, usePlayerStore, usePlaylistStore } from "@/src/state";
-import { useTheme } from "@/src/theme/provider";
 
 export default function HomeScreen() {
-  const { tokens } = useTheme();
   const { tracks, isLoading } = useLibraryStore();
   const { activeTrack } = usePlayerStore();
   const { playlists } = usePlaylistStore();
@@ -254,53 +252,34 @@ export default function HomeScreen() {
   }
 
   return (
-    <View
-      style={[
-        styles.screenContainer,
-        { backgroundColor: tokens.colors.background },
-      ]}
-    >
+    <View className="flex-1 bg-background">
       {/* Desktop-style Header */}
-      <View
-        style={[
-          styles.desktopHeader,
-          { backgroundColor: tokens.colors.surface },
-        ]}
-      >
-        <View style={styles.headerContent}>
+      <View className="h-15 px-5 justify-center border-b border-border bg-card">
+        <View className="flex-row items-center justify-between">
           <StarlightLogo
             width={130}
             height={25}
-            color={tokens.colors.primary}
+            color="hsl(270 85% 65%)"
           />
-          <View style={styles.headerActions}>
+          <View className="flex-row items-center gap-3">
             <Button
               size="sm"
               variant="primary"
-              style={[
-                styles.addMusicButton,
-                { backgroundColor: tokens.colors.primary },
-              ]}
+              className="flex-row items-center px-3 py-1.5 rounded-md gap-1.5"
               onPress={handlePickMusicFolders}
             >
               <IconSymbol
                 name="plus"
                 size={16}
-                color={tokens.colors.onPrimary}
+                color="hsl(0 0% 98%)"
               />
-              <Text
-                style={{
-                  color: tokens.colors.onPrimary,
-                  fontSize: 12,
-                  fontWeight: "600",
-                }}
-              >
+              <Text className="text-primary-foreground text-xs font-semibold">
                 Add Music
               </Text>
             </Button>
             <IconButton
               icon={
-                <IconSymbol name="gear" size={24} color={tokens.colors.text} />
+                <IconSymbol name="gear" size={24} color="hsl(0 0% 98%)" />
               }
               accessibilityLabel="Settings"
               onPress={() => {
@@ -312,9 +291,9 @@ export default function HomeScreen() {
       </View>
 
       {/* Main Content Area */}
-      <View style={styles.mainContent}>
+      <View className="flex-1 flex-row">
         {/* Sidebar */}
-        <View style={[styles.sidebar, { width: sidebarWidth }]}>
+        <View style={{ width: sidebarWidth }}>
           <SidebarNavigation
             onViewChange={setSidebarView}
             currentView={sidebarView}
@@ -330,18 +309,11 @@ export default function HomeScreen() {
             }
           }}
         >
-          <View
-            style={[styles.divider, { backgroundColor: tokens.colors.border }]}
-          />
+          <View className="w-5 h-full justify-center items-center bg-border" />
         </PanGestureHandler>
 
         {/* Content Area */}
-        <View
-          style={[
-            styles.contentArea,
-            { backgroundColor: tokens.colors.background },
-          ]}
-        >
+        <View className="flex-1 bg-background">
           {sidebarView === "library" ? (
             tracks.length > 0 ? (
               <TableView
@@ -384,35 +356,23 @@ export default function HomeScreen() {
                 }}
               />
             ) : (
-              <View style={styles.emptyState}>
-                <View
-                  style={[
-                    styles.emptyIcon,
-                    { backgroundColor: tokens.colors.surfaceElevated },
-                  ]}
-                >
+              <View className="flex-1 justify-center items-center px-10 pt-20">
+                <View className="w-25 h-25 rounded-full justify-center items-center mb-6 bg-card">
                   <IconSymbol
                     name="music.note.list"
                     size={48}
-                    color={tokens.colors.subtleText}
+                    color="hsl(0 0% 63%)"
                   />
                 </View>
-                <Text
-                  style={[styles.emptyTitle, { color: tokens.colors.text }]}
-                >
+                <Text className="text-foreground text-2xl font-bold text-center mb-2">
                   Your Music Lives Here
                 </Text>
-                <Text
-                  style={[
-                    styles.emptySubtitle,
-                    { color: tokens.colors.subtleText },
-                  ]}
-                >
+                <Text className="text-muted-foreground text-base text-center mb-8 leading-6">
                   Add your favorite songs and albums to get started
                 </Text>
                 <Button
                   onPress={handlePickMusicFolders}
-                  style={styles.emptyAction}
+                  className="px-8"
                 >
                   Add Music
                 </Button>
@@ -423,18 +383,14 @@ export default function HomeScreen() {
           ) : sidebarView === "albums" ? (
             <AlbumsScreen onBack={() => setSidebarView("library")} />
           ) : sidebarView === "genres" ? (
-            <View style={styles.placeholderView}>
-              <Text
-                style={[styles.placeholderText, { color: tokens.colors.text }]}
-              >
+            <View className="flex-1 justify-center items-center px-10">
+              <Text className="text-foreground text-lg font-medium text-center">
                 Genres view coming soon...
               </Text>
             </View>
           ) : (
-            <View style={styles.placeholderView}>
-              <Text
-                style={[styles.placeholderText, { color: tokens.colors.text }]}
-              >
+            <View className="flex-1 justify-center items-center px-10">
+              <Text className="text-foreground text-lg font-medium text-center">
                 {sidebarView} view coming soon...
               </Text>
             </View>
@@ -506,61 +462,46 @@ export default function HomeScreen() {
         onRequestClose={() => setShowGearMenu(false)}
       >
         <Pressable
-          style={styles.gearMenuBackdrop}
+          className="flex-1 bg-black/10"
           onPress={() => setShowGearMenu(false)}
         >
-          <View
-            style={[
-              styles.gearMenu,
-              { backgroundColor: tokens.colors.surface },
-            ]}
-          >
+          <View className="absolute top-20 right-5 w-50 rounded-lg shadow-lg shadow-black/25 border border-border bg-card">
             <Pressable
-              style={styles.gearMenuItem}
+              className="py-3 px-4 border-b border-border"
               onPress={() => {
                 setShowGearMenu(false);
                 handleClearLibrary();
               }}
             >
-              <View style={styles.gearMenuItemContent}>
-                <View style={styles.gearMenuItemIcon}>
+              <View className="flex-row items-center">
+                <View className="w-5 items-center mr-3">
                   <IconSymbol
                     name="trash"
                     size={16}
-                    color={tokens.colors.danger}
+                    color="hsl(0 84% 60%)"
                   />
                 </View>
-                <Text
-                  style={[
-                    styles.gearMenuItemText,
-                    { color: tokens.colors.danger },
-                  ]}
-                >
+                <Text className="text-destructive text-sm font-medium">
                   Delete All Songs
                 </Text>
               </View>
             </Pressable>
             <Pressable
-              style={styles.gearMenuItem}
+              className="py-3 px-4"
               onPress={() => {
                 setShowGearMenu(false);
                 handleClearAllPlaylists();
               }}
             >
-              <View style={styles.gearMenuItemContent}>
-                <View style={styles.gearMenuItemIcon}>
+              <View className="flex-row items-center">
+                <View className="w-5 items-center mr-3">
                   <IconSymbol
                     name="trash"
                     size={16}
-                    color={tokens.colors.danger}
+                    color="hsl(0 84% 60%)"
                   />
                 </View>
-                <Text
-                  style={[
-                    styles.gearMenuItemText,
-                    { color: tokens.colors.danger },
-                  ]}
-                >
+                <Text className="text-destructive text-sm font-medium">
                   Delete All Playlists
                 </Text>
               </View>
@@ -572,143 +513,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screenContainer: {
-    flex: 1,
-  },
-
-  // Desktop Header Styles
-  desktopHeader: {
-    height: 60,
-    paddingHorizontal: 20,
-    justifyContent: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
-  },
-  headerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  addMusicButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    gap: 6,
-  },
-
-  // Main Content Layout
-  mainContent: {
-    flex: 1,
-    flexDirection: "row",
-  },
-  sidebar: {
-    // Width is set dynamically via inline style
-  },
-  divider: {
-    width: 20,
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  contentArea: {
-    flex: 1,
-  },
-
-  // Placeholder View
-  placeholderView: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 40,
-  },
-  placeholderText: {
-    fontSize: 18,
-    fontWeight: "500",
-    textAlign: "center",
-  },
-
-  // Empty State
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 40,
-    paddingTop: 80,
-  },
-  emptyIcon: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  emptyTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 32,
-    lineHeight: 22,
-  },
-  emptyAction: {
-    paddingHorizontal: 32,
-  },
-
-  // Gear Menu Styles
-  gearMenuBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.1)",
-  },
-  gearMenu: {
-    position: "absolute",
-    top: 80,
-    right: 20,
-    width: 200,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-  },
-  gearMenuItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.05)",
-  },
-  gearMenuItemContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  gearMenuItemIcon: {
-    width: 20,
-    alignItems: "center",
-    marginRight: 12,
-  },
-  gearMenuItemText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-});
+// Styles removed - now using NativeWind classes
 
 function formatTrackDuration(duration?: number | null) {
   if (!duration) return "";

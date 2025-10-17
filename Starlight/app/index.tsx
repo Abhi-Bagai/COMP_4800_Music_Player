@@ -1,5 +1,5 @@
 import { Redirect } from 'expo-router';
 
-export default function Index() {
+export default function Screen() {
   return <Redirect href="/(tabs)/library" />;
 }

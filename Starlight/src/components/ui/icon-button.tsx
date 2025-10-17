@@ -1,7 +1,6 @@
+import { Button } from '@/components/ui/button';
 import { cloneElement, isValidElement } from 'react';
-import { Pressable, PressableProps, StyleSheet, View } from 'react-native';
-
-import { useTheme } from '@/src/theme/provider';
+import { PressableProps } from 'react-native';
 
 export interface IconButtonProps extends PressableProps {
   size?: 'sm' | 'md' | 'lg';
@@ -9,54 +8,43 @@ export interface IconButtonProps extends PressableProps {
   icon: React.ReactNode;
 }
 
-export function IconButton({ size = 'md', tone = 'default', icon, style, ...rest }: IconButtonProps) {
-  const { tokens } = useTheme();
+// Map tone to Button variant
+const mapToneToVariant = (tone: string) => {
+  switch (tone) {
+    case 'primary':
+      return 'default';
+    case 'danger':
+      return 'destructive';
+    default:
+      return 'ghost';
+  }
+};
 
-  const dimension = {
-    sm: 32,
-    md: 40,
-    lg: 48,
-  }[size];
+// Map size to Button size
+const mapSizeToButtonSize = (size: string) => {
+  switch (size) {
+    case 'sm':
+      return 'sm';
+    case 'lg':
+      return 'lg';
+    default:
+      return 'default';
+  }
+};
 
-  const background = {
-    default: tokens.colors.surfaceElevated,
-    primary: tokens.colors.primary,
-    danger: tokens.colors.danger,
-  }[tone];
-
-  const pressedBg = tone === 'default' ? tokens.colors.surface : tokens.colors.primaryMuted;
-
-  const contentColor = tone === 'primary' ? tokens.colors.onPrimary : tokens.colors.text;
-
-  const renderedIcon = isValidElement(icon) ? cloneElement(icon, { color: contentColor }) : icon;
+export function IconButton({ size = 'md', tone = 'default', icon, ...rest }: IconButtonProps) {
+  const variant = mapToneToVariant(tone);
+  const buttonSize = mapSizeToButtonSize(size);
+  
+  const renderedIcon = isValidElement(icon) ? icon : icon;
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      style={({ pressed }) => [
-        styles.base,
-        {
-          width: dimension,
-          height: dimension,
-          borderRadius: tokens.radius.lg,
-          backgroundColor: pressed ? pressedBg : background,
-        },
-        style,
-      ]}
+    <Button
+      variant={variant}
+      size={buttonSize}
       {...rest}
     >
-      <View style={styles.iconContainer}>{renderedIcon}</View>
-    </Pressable>
+      {renderedIcon}
+    </Button>
   );
 }
-
-const styles = StyleSheet.create({
-  base: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

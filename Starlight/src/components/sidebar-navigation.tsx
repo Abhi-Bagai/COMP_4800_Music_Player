@@ -145,17 +145,13 @@ export function SidebarNavigation({
 
   return (
     <View
-      style={[
-        styles.container,
-        { backgroundColor: tokens.colors.surfaceElevated },
-      ]}
+      style={[styles.container]}
+      className="flex-1 bg-card"
     >
       {/* Search Bar */}
       <View
-        style={[
-          styles.searchContainer,
-          { backgroundColor: tokens.colors.surface },
-        ]}
+        style={[styles.searchContainer]}
+        className="flex-row items-center px-3 py-2 mx-3 rounded-lg gap-2 bg-secondary"
       >
         <IconSymbol
           name="magnifyingglass"
