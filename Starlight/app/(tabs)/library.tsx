@@ -33,6 +33,7 @@ import {
   deleteTrack,
   hydrateLibraryFromDatabase,
 } from "@/src/services/library-service";
+import { getTrackTags, saveTrackTags, getAllTrackTags } from "@/src/services/tag-service";
 import { playTrack } from "@/src/services/playback-service";
 import {
   hydratePlaylistsFromDatabase,
@@ -61,11 +62,22 @@ export default function HomeScreen() {
     useState<any>(null);
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [showGearMenu, setShowGearMenu] = useState(false);
+  const [trackTags, setTrackTags] = useState<{[trackId: string]: string[]}>({});
 
   useEffect(() => {
     hydrateLibraryFromDatabase();
     hydratePlaylistsFromDatabase();
+    loadTrackTags();
   }, []);
+
+  const loadTrackTags = async () => {
+    try {
+      const tags = await getAllTrackTags();
+      setTrackTags(tags);
+    } catch (error) {
+      console.error('Error loading track tags:', error);
+    }
+  };
 
   const handlePickMusicFolders = () => {
     setShowFolderPicker(true);
@@ -326,7 +338,7 @@ export default function HomeScreen() {
                   durationMs: track.durationMs,
                   genre: "Dubstep", // Mock genre for now
                   bpm: 140, // Mock BPM for now
-                  tags: ["Banger", "Dancefloor", "Headline", "Peak-time"], // Mock tags for now
+                  tags: trackTags[track.id] || [], // Get stored tags for this track
                 }))}
                 onTrackPress={(track) =>
                   playTrack(tracks.find((t) => t.id === track.id)!)
@@ -460,10 +472,20 @@ export default function HomeScreen() {
           setSelectedTrackForTagging(null);
         }}
         trackId={selectedTrackForTagging?.id}
-        currentTags={["Banger", "Dancefloor"]} // Mock current tags
-        onTagsUpdate={(tags) => {
-          console.log("Tags updated:", tags);
-          // Here you would update the track's tags in the database
+        currentTags={selectedTrackForTagging ? (trackTags[selectedTrackForTagging.id] || []) : []}
+        onTagsUpdate={async (tags) => {
+          if (selectedTrackForTagging) {
+            try {
+              await saveTrackTags(selectedTrackForTagging.id, tags);
+              setTrackTags(prev => ({
+                ...prev,
+                [selectedTrackForTagging.id]: tags
+              }));
+              console.log("Tags updated for track:", selectedTrackForTagging.id, tags);
+            } catch (error) {
+              console.error('Error saving tags:', error);
+            }
+          }
         }}
       />
 

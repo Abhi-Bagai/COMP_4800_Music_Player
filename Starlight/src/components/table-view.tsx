@@ -152,7 +152,7 @@ function TableHeader({
                   <View
                     style={[
                       styles.resizeHandle,
-                      { backgroundColor: tokens.colors.border },
+                      { backgroundColor: 'transparent' },
                     ]}
                   />
                 </PanGestureHandler>
@@ -820,7 +820,7 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   resizeHandle: {
-    width: 8,
+    width: 1,
     height: "100%",
     cursor: "pointer" as any,
     alignItems: "center",
@@ -828,8 +828,8 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontSize: 12,
-    fontWeight: "600",
-    textTransform: "uppercase",
+    fontWeight: "400",
+    textTransform: "capitalize",
     letterSpacing: 0.5,
   },
   list: {
