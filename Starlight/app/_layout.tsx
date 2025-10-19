@@ -7,6 +7,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import { View } from 'react-native';
+import { AudioPlaybackProvider } from '@/src/components/audio-playback-provider';
 import { ThemeProvider as CustomThemeProvider } from '@/src/theme/provider';
 
 export {
@@ -22,6 +23,7 @@ export default function RootLayout() {
           <StatusBar style="light" />
           <Stack screenOptions={{ headerShown: false }} />
           <PortalHost />
+          <AudioPlaybackProvider />
         </ThemeProvider>
       </CustomThemeProvider>
     </View>
