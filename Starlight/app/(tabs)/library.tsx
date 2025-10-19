@@ -489,6 +489,13 @@ export default function HomeScreen() {
                   // TODO: Implement show playlists functionality
                   console.log("Show playlists for track:", track.title);
                 }}
+                onTrackTag={(track) => {
+                  const actualTrack = tracks.find((t) => t.id === track.id);
+                  if (actualTrack) {
+                    setSelectedTrackForTagging(actualTrack);
+                    setShowTagManager(true);
+                  }
+                }}
                 onBulkDelete={(tracks) => {
                   console.log(
                     "Bulk delete tracks:",

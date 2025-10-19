@@ -32,6 +32,7 @@ interface TableViewProps {
   onTrackDelete?: (track: Track) => void;
   onTrackAddToPlaylist?: (track: Track) => void;
   onTrackShowPlaylists?: (track: Track) => void;
+  onTrackTag?: (track: Track) => void;
   onBulkDelete?: (tracks: Track[]) => void;
   onBulkAddToPlaylist?: (tracks: Track[]) => void;
 }
@@ -180,6 +181,7 @@ interface ContextMenuProps {
   onAddToPlaylist: (track: Track) => void;
   onDelete: (track: Track) => void;
   onShowPlaylists: (track: Track) => void;
+  onTagTrack: (track: Track) => void;
   onBulkDelete: (tracks: Track[]) => void;
   onBulkAddToPlaylist: (tracks: Track[]) => void;
 }
@@ -207,6 +209,7 @@ function ContextMenu({
   onAddToPlaylist,
   onDelete,
   onShowPlaylists,
+  onTagTrack,
   onBulkDelete,
   onBulkAddToPlaylist,
 }: ContextMenuProps) {
@@ -240,6 +243,15 @@ function ContextMenu({
         }
         onClose();
       },
+    },
+    {
+      label: "Tag Track",
+      icon: "tag",
+      onPress: () => {
+        onTagTrack(currentTrack);
+        onClose();
+      },
+      disabled: hasMultipleSelected,
     },
     {
       label: "Show Playlists",
@@ -596,6 +608,7 @@ export function TableView({
   onTrackDelete,
   onTrackAddToPlaylist,
   onTrackShowPlaylists,
+  onTrackTag,
   onBulkDelete,
   onBulkAddToPlaylist,
 }: TableViewProps) {
@@ -776,6 +789,7 @@ export function TableView({
         onClose={closeContextMenu}
         onPlay={(track) => onTrackPress(track)}
         onAddToPlaylist={(track) => onTrackAddToPlaylist?.(track)}
+        onTagTrack={(track) => onTrackTag?.(track)}
         onDelete={(track) => onTrackDelete?.(track)}
         onShowPlaylists={(track) => onTrackShowPlaylists?.(track)}
         onBulkDelete={(tracks) => onBulkDelete?.(tracks)}
