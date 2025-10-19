@@ -44,6 +44,10 @@ const MAPPING = {
   'pianokeys': 'piano',
   'chevron.up': 'keyboard-arrow-up',
   'chevron.down': 'keyboard-arrow-down',
+  
+  // Repeat icons
+  'repeat': 'repeat',
+  'repeat.1': 'repeat-one',
 } as IconMapping;
 
 /**

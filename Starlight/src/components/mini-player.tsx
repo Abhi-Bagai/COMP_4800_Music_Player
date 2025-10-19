@@ -1,3 +1,4 @@
+import Slider from '@react-native-community/slider';
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
@@ -8,6 +9,7 @@ import {
   skipNext,
   skipPrevious,
   togglePlayPause,
+  setVolume,
 } from "@/src/services/playback-service";
 import { usePlayerStore } from "@/src/state";
 import { useTheme } from "@/src/theme/provider";
@@ -19,13 +21,18 @@ interface MiniPlayerProps {
 
 export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
   const { tokens } = useTheme();
-  const { activeTrack, isPlaying, positionMs } = usePlayerStore();
+  const { activeTrack, isPlaying, positionMs, volume } = usePlayerStore();
 
   if (!activeTrack) return null;
 
   const handlePlayPause = async (e: any) => {
     e.stopPropagation();
     await togglePlayPause();
+  };
+
+  const handleVolumeChange = async (value: number) => {
+    const percent = Number.isFinite(value) ? Math.min(Math.max(value, 0), 100) : 0;
+    await setVolume(percent / 100);
   };
 
   const progressPercentage = (() => {
@@ -183,22 +190,16 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
             size={16}
             color={tokens.colors.text}
           />
-          <View
-            style={[
-              styles.volumeSlider,
-              { backgroundColor: tokens.colors.surface },
-            ]}
-          >
-            <View
-              style={[
-                styles.volumeFill,
-                {
-                  width: "60%",
-                  backgroundColor: tokens.colors.primary,
-                },
-              ]}
-            />
-          </View>
+          <Slider
+            style={styles.volumeSlider}
+            minimumValue={0}
+            maximumValue={100}
+            value={volume * 100}
+            onSlidingComplete={handleVolumeChange}
+            minimumTrackTintColor={tokens.colors.primary}
+            maximumTrackTintColor={tokens.colors.surface}
+            thumbTintColor={tokens.colors.primary}
+          />
         </View>
       </View>
     </View>
@@ -291,11 +292,6 @@ const styles = StyleSheet.create({
   },
   volumeSlider: {
     flex: 1,
-    height: 4,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  volumeFill: {
-    height: "100%",
+    height: 20,
   },
 });

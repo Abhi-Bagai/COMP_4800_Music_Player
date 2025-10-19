@@ -31,6 +31,11 @@ const navigationItems: NavigationItem[] = [
     icon: "music.note.list",
   },
   {
+    id: "now-playing",
+    label: "Now Playing",
+    icon: "play.fill",
+  },
+  {
     id: "artists",
     label: "Artists",
     icon: "mic",
@@ -59,7 +64,6 @@ export function SidebarNavigation({
   const { tokens } = useTheme();
   const [expandedItems, setExpandedItems] = useState<string[]>([
     "library",
-    "tags",
   ]);
   const [searchText, setSearchText] = useState("");
 
@@ -79,11 +83,13 @@ export function SidebarNavigation({
     return (
       <View key={item.id}>
         <Pressable
-          style={[
+          style={({ pressed }) => [
             styles.navItem,
             {
               backgroundColor: isSelected
-                ? tokens.colors.primary
+                ? tokens.colors.surfaceElevated
+                : pressed
+                ? tokens.colors.surfaceElevated
                 : "transparent",
               paddingLeft: 16 + level * 16,
             },
@@ -100,14 +106,14 @@ export function SidebarNavigation({
             <IconSymbol
               name={item.icon as any}
               size={16}
-              color={isSelected ? tokens.colors.onPrimary : tokens.colors.text}
+              color={isSelected ? tokens.colors.primary : tokens.colors.text}
             />
             <Text
               style={[
                 styles.navItemText,
                 {
                   color: isSelected
-                    ? tokens.colors.onPrimary
+                    ? tokens.colors.primary
                     : tokens.colors.text,
                 },
               ]}
@@ -120,7 +126,7 @@ export function SidebarNavigation({
                 size={12}
                 color={
                   isSelected
-                    ? tokens.colors.onPrimary
+                    ? tokens.colors.primary
                     : tokens.colors.subtleText
                 }
               />
@@ -154,7 +160,7 @@ export function SidebarNavigation({
     >
       {/* Search Bar */}
       <View
-        style={[styles.searchContainer, { backgroundColor: tokens.colors.secondary }]}
+        style={[styles.searchContainer, { backgroundColor: tokens.colors.surfaceElevated }]}
       >
         <IconSymbol
           name="magnifyingglass"
