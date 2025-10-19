@@ -403,7 +403,7 @@ export default function HomeScreen() {
       {/* Desktop-style Header */}
       <View style={[styles.header, { 
         backgroundColor: tokens.colors.surface,
-        borderBottomColor: tokens.colors.border 
+        borderBottomColor: tokens.colors.background 
       }]}>
         <View style={styles.headerCenter}>
           <StarlightLogo
@@ -459,7 +459,7 @@ export default function HomeScreen() {
             }
           }}
         >
-          <View style={[styles.divider, { backgroundColor: tokens.colors.border }]} />
+          <View style={[styles.divider, { backgroundColor: tokens.colors.background }]} />
         </PanGestureHandler>
 
         {/* Content Area */}
@@ -651,7 +651,7 @@ export default function HomeScreen() {
             borderColor: tokens.colors.border 
           }]}>
             <Pressable
-              style={[styles.menuItem, { borderBottomColor: tokens.colors.border }]}
+              style={[styles.menuItem, { borderBottomColor: tokens.colors.background }]}
               onPress={() => {
                 setShowGearMenu(false);
                 handleClearLibrary();
@@ -710,7 +710,7 @@ export default function HomeScreen() {
             borderColor: tokens.colors.border 
           }]}>
             <Pressable
-              style={[styles.menuItem, { borderBottomColor: tokens.colors.border }]}
+              style={[styles.menuItem, { borderBottomColor: tokens.colors.background }]}
               onPress={() => {
                 setShowAddMusicMenu(false);
                 handlePickFolder();
@@ -790,7 +790,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   divider: {
-    width: 20,
+    width: 4,
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',

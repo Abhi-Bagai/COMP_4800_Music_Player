@@ -305,7 +305,7 @@ function ContextMenu({
               style={[
                 styles.contextMenuItem,
                 index < menuItems.length - 1 && {
-                  borderBottomColor: tokens.colors.border,
+                  borderBottomColor: tokens.colors.background,
                   borderBottomWidth: 1,
                 },
               ]}
@@ -809,6 +809,8 @@ export function TableView({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   header: {
     flexDirection: "row",
