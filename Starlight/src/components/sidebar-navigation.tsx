@@ -33,7 +33,7 @@ const navigationItems: NavigationItem[] = [
   {
     id: "artists",
     label: "Artists",
-    icon: "person.2.fill",
+    icon: "mic",
   },
   {
     id: "albums",
@@ -48,7 +48,7 @@ const navigationItems: NavigationItem[] = [
   {
     id: "genres",
     label: "Genres",
-    icon: "music.note",
+    icon: "pianokeys",
   },
 ];
 

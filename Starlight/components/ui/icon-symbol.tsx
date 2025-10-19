@@ -36,6 +36,14 @@ const MAPPING = {
   'folder': 'folder',
   'xmark.circle.fill': 'highlight-off',
   'gear': 'settings',
+  
+  // Navigation icons
+  'person.2.fill': 'group',
+  'opticaldisc': 'album',
+  'mic': 'mic',
+  'pianokeys': 'piano',
+  'chevron.up': 'keyboard-arrow-up',
+  'chevron.down': 'keyboard-arrow-down',
 } as IconMapping;
 
 /**
