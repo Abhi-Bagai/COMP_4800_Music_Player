@@ -108,16 +108,16 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
             {/* Header */}
             <View style={styles.header}>
               <IconButton
-                icon={<IconSymbol name="chevron.down" size={24} color={tokens.colors.onSurface} />}
+                icon={<IconSymbol name="chevron.down" size={24} color={tokens.colors.text} />}
                 onPress={onClose}
                 accessibilityLabel="Close"
               />
               <View style={styles.headerInfo}>
-                <Text style={[styles.headerTitle, { color: tokens.colors.onSurface }]}>Now Playing</Text>
-                <Text style={[styles.headerSubtitle, { color: tokens.colors.subtle }]}>From Your Library</Text>
+                <Text style={[styles.headerTitle, { color: tokens.colors.text }]}>Now Playing</Text>
+                <Text style={[styles.headerSubtitle, { color: tokens.colors.subtleText }]}>From Your Library</Text>
               </View>
               <IconButton
-                icon={<IconSymbol name="ellipsis" size={24} color={tokens.colors.onSurface} />}
+                icon={<IconSymbol name="ellipsis" size={24} color={tokens.colors.text} />}
                 accessibilityLabel="More options"
               />
             </View>
@@ -138,10 +138,10 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
 
             {/* Track Info */}
             <View style={styles.trackInfo}>
-              <Text style={[styles.trackTitle, { color: tokens.colors.onSurface }]} numberOfLines={1}>
+              <Text style={[styles.trackTitle, { color: tokens.colors.text }]} numberOfLines={1}>
                 {activeTrack.title}
               </Text>
-              <Text style={[styles.artistName, { color: tokens.colors.subtle }]} numberOfLines={1}>
+              <Text style={[styles.artistName, { color: tokens.colors.subtleText }]} numberOfLines={1}>
                 {activeTrack.artist?.name ?? 'Unknown Artist'}
               </Text>
             </View>
@@ -159,8 +159,8 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
                 thumbTintColor={tokens.colors.primary}
               />
               <View style={styles.timeLabels}>
-                <Text style={[styles.timeText, { color: tokens.colors.subtle }]}>{formatTime(positionMs)}</Text>
-                <Text style={[styles.timeText, { color: tokens.colors.subtle }]}>
+                <Text style={[styles.timeText, { color: tokens.colors.subtleText }]}>{formatTime(positionMs)}</Text>
+                <Text style={[styles.timeText, { color: tokens.colors.subtleText }]}>
                   {formatTime(activeTrack.durationMs || 0)}
                 </Text>
               </View>
@@ -169,7 +169,7 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
             {/* Playback Controls */}
             <View style={styles.controls}>
               <IconButton
-                icon={<IconSymbol name="backward.fill" size={32} color={tokens.colors.onSurface} />}
+                icon={<IconSymbol name="backward.fill" size={32} color={tokens.colors.text} />}
                 onPress={skipPrevious}
                 accessibilityLabel="Previous track"
               />
@@ -187,7 +187,7 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
               </Pressable>
 
               <IconButton
-                icon={<IconSymbol name="forward.fill" size={32} color={tokens.colors.onSurface} />}
+                icon={<IconSymbol name="forward.fill" size={32} color={tokens.colors.text} />}
                 onPress={skipNext}
                 accessibilityLabel="Next track"
               />
@@ -195,7 +195,7 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
 
             {/* Volume Control */}
             <View style={styles.volumeContainer}>
-              <IconSymbol name="speaker.fill" size={16} color={tokens.colors.subtle} />
+              <IconSymbol name="speaker.fill" size={16} color={tokens.colors.subtleText} />
               <Slider
                 style={styles.volumeSlider}
                 minimumValue={0}
@@ -206,21 +206,21 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
                 maximumTrackTintColor={tokens.colors.surfaceElevated}
                 thumbTintColor={tokens.colors.primary}
               />
-              <IconSymbol name="speaker.wave.3.fill" size={16} color={tokens.colors.subtle} />
+              <IconSymbol name="speaker.wave.3.fill" size={16} color={tokens.colors.subtleText} />
             </View>
 
             {/* Bottom Actions */}
             <View style={styles.bottomActions}>
               <IconButton
-                icon={<IconSymbol name="quote.bubble" size={24} color={tokens.colors.subtle} />}
+                icon={<IconSymbol name="quote.bubble" size={24} color={tokens.colors.subtleText} />}
                 accessibilityLabel="Lyrics"
               />
               <IconButton
-                icon={<IconSymbol name="airplayaudio" size={24} color={tokens.colors.subtle} />}
+                icon={<IconSymbol name="airplayaudio" size={24} color={tokens.colors.subtleText} />}
                 accessibilityLabel="AirPlay"
               />
               <IconButton
-                icon={<IconSymbol name="list.bullet" size={24} color={tokens.colors.subtle} />}
+                icon={<IconSymbol name="list.bullet" size={24} color={tokens.colors.subtleText} />}
                 accessibilityLabel="Up next"
               />
             </View>

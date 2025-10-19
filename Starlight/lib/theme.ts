@@ -2,56 +2,56 @@ import { DarkTheme, DefaultTheme, type Theme } from '@react-navigation/native';
  
 export const THEME = {
   light: {
-    background: 'hsl(0 0% 98%)',
-    foreground: 'hsl(0 0% 10%)',
-    card: 'hsl(0 0% 100%)',
-    cardForeground: 'hsl(0 0% 10%)',
-    popover: 'hsl(0 0% 100%)',
-    popoverForeground: 'hsl(0 0% 10%)',
-    primary: 'hsl(270 85% 65%)',
-    primaryForeground: 'hsl(0 0% 98%)',
-    secondary: 'hsl(0 0% 96%)',
-    secondaryForeground: 'hsl(0 0% 10%)',
-    muted: 'hsl(0 0% 96%)',
-    mutedForeground: 'hsl(0 0% 45%)',
-    accent: 'hsl(270 85% 65%)',
-    accentForeground: 'hsl(0 0% 98%)',
-    destructive: 'hsl(0 84% 60%)',
-    border: 'hsl(0 0% 90%)',
-    input: 'hsl(0 0% 90%)',
-    ring: 'hsl(270 85% 65%)',
+    background: '#F5F6FA', // Off-white/very light gray background
+    foreground: '#0F1014', // Very dark gray for primary text
+    card: '#FFFFFF', // Pure white for surfaces
+    cardForeground: '#0F1014', // Dark text on light cards
+    popover: '#FFFFFF', // Same as card
+    popoverForeground: '#0F1014', // Dark text on popovers
+    primary: '#C678FF', // Vibrant purple for primary accent
+    primaryForeground: '#FFFFFF', // White text on primary
+    secondary: '#E2E8F0', // Light gray for secondary elements
+    secondaryForeground: '#0F1014', // Dark text on light secondary
+    muted: '#F8FAFC', // Very light gray for muted elements
+    mutedForeground: '#64748B', // Medium gray for muted text
+    accent: '#C678FF', // Vibrant purple accent
+    accentForeground: '#FFFFFF', // White text on accent
+    destructive: '#EF4444', // Red for destructive actions
+    border: '#E2E8F0', // Light gray borders
+    input: '#E2E8F0', // Light gray for inputs
+    ring: '#C678FF', // Vibrant purple for focus rings
     radius: '0.625rem',
-    chart1: 'hsl(270 85% 65%)',
-    chart2: 'hsl(270 70% 55%)',
-    chart3: 'hsl(270 75% 60%)',
-    chart4: 'hsl(270 80% 70%)',
-    chart5: 'hsl(270 90% 75%)',
+    chart1: '#C678FF', // Vibrant purple
+    chart2: '#A855F7', // Muted purple
+    chart3: '#9333EA', // Darker purple
+    chart4: '#7C3AED', // Even darker purple
+    chart5: '#6D28D9', // Darkest purple
   },
   dark: {
-    background: 'hsl(0 0% 10%)',
-    foreground: 'hsl(0 0% 98%)',
-    card: 'hsl(0 0% 16%)',
-    cardForeground: 'hsl(0 0% 98%)',
-    popover: 'hsl(0 0% 16%)',
-    popoverForeground: 'hsl(0 0% 98%)',
-    primary: 'hsl(270 85% 65%)',
-    primaryForeground: 'hsl(0 0% 98%)',
-    secondary: 'hsl(0 0% 23%)',
-    secondaryForeground: 'hsl(0 0% 98%)',
-    muted: 'hsl(0 0% 23%)',
-    mutedForeground: 'hsl(0 0% 63%)',
-    accent: 'hsl(270 85% 65%)',
-    accentForeground: 'hsl(0 0% 98%)',
-    destructive: 'hsl(0 84% 60%)',
-    border: 'hsl(0 0% 25%)',
-    input: 'hsl(0 0% 25%)',
-    ring: 'hsl(270 85% 65%)',
+    background: '#0F1014', // Main dark background - very dark gray/almost black
+    foreground: '#FFFFFF', // Pure white text
+    card: '#181A20', // Sidebar/surface color - dark gray
+    cardForeground: '#FFFFFF', // White text on cards
+    popover: '#181A20', // Same as card
+    popoverForeground: '#FFFFFF', // White text on popovers
+    primary: '#C678FF', // Vibrant purple for primary accent
+    primaryForeground: '#FFFFFF', // White text on primary
+    secondary: '#343845', // Medium dark gray with blue tint
+    secondaryForeground: '#FFFFFF', // White text on secondary
+    muted: '#26282F', // Elevated surfaces/hover states
+    mutedForeground: '#C8CAD4', // Light gray for muted text
+    accent: '#C678FF', // Vibrant purple accent
+    accentForeground: '#FFFFFF', // White text on accent
+    destructive: '#F87171', // Red for destructive actions
+    border: '#343845', // Medium dark gray with blue tint for borders
+    input: '#343845', // Same as border for inputs
+    ring: '#C678FF', // Vibrant purple for focus rings
     radius: '0.625rem',
-    chart1: 'hsl(270 85% 65%)',
-    chart2: 'hsl(270 70% 55%)',
-    chart3: 'hsl(270 75% 60%)',
-    chart4: 'hsl(270 80% 70%)',
-    chart5: 'hsl(270 90% 75%)',
+    chart1: '#C678FF', // Vibrant purple
+    chart2: '#A855F7', // Muted purple
+    chart3: '#9333EA', // Darker purple
+    chart4: '#7C3AED', // Even darker purple
+    chart5: '#6D28D9', // Darkest purple
   },
 };
  

@@ -13,6 +13,7 @@ import {
   idbDeletePlaylist,
   idbUpdatePlaylist,
   idbClearPlaylists,
+  idbIsTrackInPlaylist,
 } from './indexeddb';
 
 export interface CreatePlaylistData {
@@ -85,6 +86,7 @@ export async function getAllPlaylists() {
       is_system_playlist: row.is_system_playlist,
       created_at: row.created_at,
       updated_at: row.updated_at,
+      playlistTracks: row.playlistTracks || [],
     }));
   }
 
@@ -172,6 +174,15 @@ export async function getPlaylistWithTracks(playlistId: string): Promise<Playlis
 
 export async function addTrackToPlaylist(playlistId: string, trackId: string): Promise<void> {
   if (Platform.OS === 'web') {
+    // Check if track already exists in playlist using a more efficient method
+    const trackExists = await idbIsTrackInPlaylist(playlistId, trackId);
+    if (trackExists) {
+      throw new Error('Track already exists in this playlist');
+    }
+
+    // Small delay to ensure database connection is properly reset between transactions
+    await new Promise(resolve => setTimeout(resolve, 10));
+
     const position = await idbNextPlaylistPosition(playlistId);
     await idbAddTrackToPlaylist({
       id: generateId(),
@@ -184,6 +195,23 @@ export async function addTrackToPlaylist(playlistId: string, trackId: string): P
   }
 
   const db = await getDb();
+  
+  // Check if track already exists in playlist
+  const existingTrack = await db
+    .select()
+    .from(schema.playlistTracks)
+    .where(
+      and(
+        eq(schema.playlistTracks.playlistId, playlistId),
+        eq(schema.playlistTracks.trackId, trackId)
+      )
+    )
+    .limit(1);
+
+  if (existingTrack.length > 0) {
+    throw new Error('Track already exists in this playlist');
+  }
+
   const result = await db
     .select({ maxPos: schema.playlistTracks.position })
     .from(schema.playlistTracks)

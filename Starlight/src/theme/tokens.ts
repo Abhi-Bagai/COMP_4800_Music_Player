@@ -79,37 +79,37 @@ const typography = {
 };
 
 const lightColors: ThemeTokens["colors"] = {
-  background: "#F7F9FB",
-  surface: "#FFFFFF",
-  surfaceElevated: "#EDF1F7",
-  primary: "#2563EB",
-  primaryMuted: "#AEC8FF",
-  onPrimary: "#FFFFFF",
-  secondary: "#6366F1",
-  onSecondary: "#FFFFFF",
-  text: "#0F172A",
-  subtleText: "#475569",
-  border: "#CBD5F5",
-  accent: "#14B8A6",
-  danger: "#EF4444",
-  success: "#22C55E",
+  background: "#F5F6FA", // Off-white/very light gray background
+  surface: "#FFFFFF", // Pure white for surfaces
+  surfaceElevated: "#F8FAFC", // Very light gray for elevated surfaces
+  primary: "#C678FF", // Same vibrant purple for consistency
+  primaryMuted: "#A855F7", // Muted purple for secondary states
+  onPrimary: "#FFFFFF", // White text on primary
+  secondary: "#E2E8F0", // Light gray for secondary elements
+  onSecondary: "#0F1014", // Dark text on light secondary
+  text: "#0F1014", // Very dark gray for primary text
+  subtleText: "#64748B", // Medium gray for subtle text
+  border: "#E2E8F0", // Light gray borders
+  accent: "#C678FF", // Vibrant purple accent
+  danger: "#EF4444", // Red for destructive actions
+  success: "#1ED760", // Vibrant green for success states
 };
 
 const darkColors: ThemeTokens["colors"] = {
-  background: "#1A1A1A", // Main dark background
-  surface: "#2A2A2A", // Slightly lighter for cards/surfaces
-  surfaceElevated: "#3A3A3A", // Even lighter for elevated surfaces
-  primary: "#8B5CF6", // Purple accent color
-  primaryMuted: "#4C1D95", // Darker purple
+  background: "#0F1014", // Main dark background - very dark gray/almost black
+  surface: "#181A20", // Sidebar/surface color - dark gray
+  surfaceElevated: "#26282F", // Elevated surfaces/hover states - darker gray
+  primary: "#C678FF", // Vibrant purple for primary accent
+  primaryMuted: "#A855F7", // Muted purple for secondary states
   onPrimary: "#FFFFFF", // White text on primary
-  secondary: "#818CF8",
-  onSecondary: "#0B1120",
-  text: "#FFFFFF", // White text
-  subtleText: "#A1A1AA", // Light gray for subtle text
-  border: "#404040", // Dark gray borders
-  accent: "#8B5CF6", // Purple accent
-  danger: "#F87171",
-  success: "#4ADE80",
+  secondary: "#343845", // Medium dark gray with blue tint for borders/dividers
+  onSecondary: "#FFFFFF", // White text on secondary
+  text: "#FFFFFF", // Pure white for primary text
+  subtleText: "#C8CAD4", // Light gray for subtle text
+  border: "#343845", // Medium dark gray with blue tint for borders
+  accent: "#C678FF", // Vibrant purple accent
+  danger: "#F87171", // Red for destructive actions
+  success: "#1ED760", // Vibrant green for success states
 };
 
 export const themeTokens: Record<ThemeMode, ThemeTokens> = {

@@ -21,7 +21,10 @@ export default function RootLayout() {
       <CustomThemeProvider initialMode="dark">
         <ThemeProvider value={NAV_THEME["dark"]}>
           <StatusBar style="light" />
-          <Stack screenOptions={{ headerShown: false }} />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+          </Stack>
           <PortalHost />
           <AudioPlaybackProvider />
         </ThemeProvider>

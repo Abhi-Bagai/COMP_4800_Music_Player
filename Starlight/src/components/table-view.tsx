@@ -14,6 +14,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { IconButton } from "@/src/components/ui/icon-button";
 import { Text } from "@/src/components/ui/text";
 import { useTheme } from "@/src/theme/provider";
+import { usePlayerStore } from "@/src/state";
 
 interface Track {
   id: string;
@@ -32,6 +33,7 @@ interface TableViewProps {
   onTrackDelete?: (track: Track) => void;
   onTrackAddToPlaylist?: (track: Track) => void;
   onTrackShowPlaylists?: (track: Track) => void;
+  onTrackTag?: (track: Track) => void;
   onBulkDelete?: (tracks: Track[]) => void;
   onBulkAddToPlaylist?: (tracks: Track[]) => void;
 }
@@ -67,8 +69,13 @@ function TableHeader({
 
   return (
     <View
-      style={[styles.header]}
-      className="flex-row py-3 px-4 border-b border-border bg-card"
+      style={[
+        styles.header,
+        {
+          backgroundColor: tokens.colors.surface,
+          borderBottomColor: tokens.colors.background,
+        },
+      ]}
     >
       {columns.map((column, index) => {
         const isAllSelected =
@@ -137,7 +144,7 @@ function TableHeader({
                 <View
                   style={[
                     styles.columnDivider,
-                    { backgroundColor: tokens.colors.border },
+                    { backgroundColor: tokens.colors.background },
                   ]}
                 />
                 <PanGestureHandler
@@ -152,7 +159,7 @@ function TableHeader({
                   <View
                     style={[
                       styles.resizeHandle,
-                      { backgroundColor: tokens.colors.border },
+                      { backgroundColor: 'transparent' },
                     ]}
                   />
                 </PanGestureHandler>
@@ -171,9 +178,11 @@ interface ContextMenuProps {
   track: Track | null;
   selectedTracks: Track[];
   onClose: () => void;
+  onPlay: (track: Track) => void;
   onAddToPlaylist: (track: Track) => void;
   onDelete: (track: Track) => void;
   onShowPlaylists: (track: Track) => void;
+  onTagTrack: (track: Track) => void;
   onBulkDelete: (tracks: Track[]) => void;
   onBulkAddToPlaylist: (tracks: Track[]) => void;
 }
@@ -197,9 +206,11 @@ function ContextMenu({
   track,
   selectedTracks,
   onClose,
+  onPlay,
   onAddToPlaylist,
   onDelete,
   onShowPlaylists,
+  onTagTrack,
   onBulkDelete,
   onBulkAddToPlaylist,
 }: ContextMenuProps) {
@@ -211,6 +222,15 @@ function ContextMenu({
   const currentTrack = track || selectedTracks[0];
 
   const menuItems = [
+    {
+      label: "Play",
+      icon: "play.fill",
+      onPress: () => {
+        onPlay(currentTrack);
+        onClose();
+      },
+      disabled: hasMultipleSelected,
+    },
     {
       label: hasMultipleSelected
         ? `Add ${selectedTracks.length} tracks to Playlists`
@@ -224,6 +244,15 @@ function ContextMenu({
         }
         onClose();
       },
+    },
+    {
+      label: "Tag Track",
+      icon: "tag",
+      onPress: () => {
+        onTagTrack(currentTrack);
+        onClose();
+      },
+      disabled: hasMultipleSelected,
     },
     {
       label: "Show Playlists",
@@ -276,7 +305,7 @@ function ContextMenu({
               style={[
                 styles.contextMenuItem,
                 index < menuItems.length - 1 && {
-                  borderBottomColor: tokens.colors.border,
+                  borderBottomColor: tokens.colors.background,
                   borderBottomWidth: 1,
                 },
               ]}
@@ -324,8 +353,12 @@ function TableRow({
   onToggleSelect,
 }: TableRowProps) {
   const { tokens } = useTheme();
+  const { activeTrack, isPlaying } = usePlayerStore();
   const [isHovered, setIsHovered] = React.useState(false);
   const [isPressed, setIsPressed] = React.useState(false);
+
+  // Check if this track is currently playing
+  const isCurrentlyPlaying = activeTrack?.id === track.id && isPlaying;
 
   const getSourceIcon = () => {
     // You can customize this based on track source
@@ -347,23 +380,51 @@ function TableRow({
   };
 
   const handleLongPress = (event: any) => {
-    // For web, we'll use onPress with a modifier key check
     // For mobile, we'll use onLongPress
     const { pageX, pageY } = event.nativeEvent;
     onContextMenu(track, { x: pageX, y: pageY });
   };
 
+  const handlePress = (event: any) => {
+    // Regular left-click
+    onPress(track);
+  };
+
+  const handleContextMenu = (event: any) => {
+    // Handle right-click context menu on web
+    if (Platform.OS === "web") {
+      event.preventDefault();
+      const { pageX, pageY } = event.nativeEvent;
+      onContextMenu(track, { x: pageX, y: pageY });
+    }
+  };
+
   return (
     <Pressable
-      style={[styles.row]}
-      className={`${isPressed ? 'bg-card' : isHovered ? 'bg-card' : 'bg-transparent'}`}
-      onPress={() => onPress(track)}
+      style={[
+        styles.row,
+        {
+          backgroundColor: isCurrentlyPlaying
+            ? tokens.colors.primary + '20' // Semi-transparent primary color for currently playing
+            : isPressed 
+            ? tokens.colors.surfaceElevated 
+            : isHovered 
+            ? tokens.colors.surfaceElevated 
+            : tokens.colors.surface,
+          borderBottomColor: tokens.colors.background,
+        },
+      ]}
+      onPress={handlePress}
       onLongPress={handleLongPress}
       delayLongPress={500}
       onPressIn={() => setIsPressed(true)}
       onPressOut={() => setIsPressed(false)}
       onHoverIn={Platform.OS === "web" ? () => setIsHovered(true) : undefined}
       onHoverOut={Platform.OS === "web" ? () => setIsHovered(false) : undefined}
+      // Handle right-click context menu on web
+      {...(Platform.OS === "web" && {
+        onContextMenu: handleContextMenu,
+      })}
     >
       {columns.map((column, columnIndex) => {
         let content;
@@ -513,26 +574,6 @@ function TableRow({
               </ScrollView>
             );
             break;
-          case "actions":
-            content = onDelete ? (
-              <IconButton
-                size="sm"
-                tone="danger"
-                icon={
-                  <IconSymbol
-                    name="trash"
-                    size={16}
-                    color={tokens.colors.danger}
-                  />
-                }
-                onPress={(e) => {
-                  e.stopPropagation();
-                  onDelete(track);
-                }}
-                accessibilityLabel={`Delete ${track.title}`}
-              />
-            ) : null;
-            break;
           default:
             content = null;
         }
@@ -543,7 +584,7 @@ function TableRow({
               style={[
                 styles.cell,
                 { width: column.width },
-                column.key === "source" || column.key === "actions"
+                column.key === "source"
                   ? { alignItems: "center" }
                   : {},
                 column.key === "tags"
@@ -557,7 +598,7 @@ function TableRow({
               <View
                 style={[
                   styles.columnDivider,
-                  { backgroundColor: tokens.colors.border },
+                  { backgroundColor: tokens.colors.background },
                 ]}
               />
             )}
@@ -574,6 +615,7 @@ export function TableView({
   onTrackDelete,
   onTrackAddToPlaylist,
   onTrackShowPlaylists,
+  onTrackTag,
   onBulkDelete,
   onBulkAddToPlaylist,
 }: TableViewProps) {
@@ -593,7 +635,6 @@ export function TableView({
     { key: "bpm", label: "BPM", width: 60 },
     { key: "genre", label: "Genre", width: 100 },
     { key: "tags", label: "Tags", width: 200 },
-    { key: "actions", label: "", width: 60 },
   ]);
   const [selectedTracks, setSelectedTracks] = React.useState<Set<string>>(
     new Set()
@@ -710,8 +751,10 @@ export function TableView({
 
   return (
     <View
-      style={[styles.container]}
-      className="flex-1 bg-background"
+      style={[
+        styles.container,
+        { backgroundColor: tokens.colors.background }
+      ]}
     >
       <TableHeader
         onSort={handleSort}
@@ -751,7 +794,9 @@ export function TableView({
         track={contextMenu.track}
         selectedTracks={getSelectedTracksArray()}
         onClose={closeContextMenu}
+        onPlay={(track) => onTrackPress(track)}
         onAddToPlaylist={(track) => onTrackAddToPlaylist?.(track)}
+        onTagTrack={(track) => onTrackTag?.(track)}
         onDelete={(track) => onTrackDelete?.(track)}
         onShowPlaylists={(track) => onTrackShowPlaylists?.(track)}
         onBulkDelete={(tracks) => onBulkDelete?.(tracks)}
@@ -764,13 +809,14 @@ export function TableView({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   header: {
     flexDirection: "row",
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+    borderBottomWidth: 2,
   },
   headerCellContainer: {
     flexDirection: "row",
@@ -791,7 +837,7 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   resizeHandle: {
-    width: 8,
+    width: 1,
     height: "100%",
     cursor: "pointer" as any,
     alignItems: "center",
@@ -799,8 +845,8 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontSize: 12,
-    fontWeight: "600",
-    textTransform: "uppercase",
+    fontWeight: "400",
+    textTransform: "capitalize",
     letterSpacing: 0.5,
   },
   list: {
@@ -810,8 +856,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.05)",
+    borderBottomWidth: 2,
   },
   cell: {
     paddingHorizontal: 8,

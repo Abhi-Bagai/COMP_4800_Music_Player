@@ -1,10 +1,11 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { addTrackToPlaylistById } from '@/src/services/playlist-service';
+import { Button } from '@/src/components/ui/button';
+import { addTrackToPlaylistById, isTrackInPlaylist } from '@/src/services/playlist-service';
 import { usePlaylistStore } from '@/src/state/playlist-store';
 import { useTheme } from '@/src/theme/provider';
 import { BlurView } from 'expo-blur';
 import { StatusBar } from 'expo-status-bar';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Modal,
@@ -36,6 +37,27 @@ export function AddToPlaylistModal({
   const { tokens } = useTheme();
   const styles = getStyles(tokens);
   const { playlists } = usePlaylistStore();
+  const [playlistTrackStatus, setPlaylistTrackStatus] = useState<Record<string, boolean>>({});
+
+  // Check which playlists already contain the track
+  useEffect(() => {
+    if (!track || !visible) return;
+
+    const checkPlaylistTrackStatus = async () => {
+      const status: Record<string, boolean> = {};
+      for (const playlist of playlists) {
+        try {
+          status[playlist.id] = await isTrackInPlaylist(playlist.id, track.id);
+        } catch (error) {
+          console.error(`Error checking track status for playlist ${playlist.id}:`, error);
+          status[playlist.id] = false;
+        }
+      }
+      setPlaylistTrackStatus(status);
+    };
+
+    checkPlaylistTrackStatus();
+  }, [track, playlists, visible]);
 
   const handleAddToPlaylist = async (playlistId: string, playlistName: string) => {
     if (!track) return;
@@ -53,16 +75,17 @@ export function AddToPlaylistModal({
     } catch (error) {
       console.error('Error adding track to playlist:', error);
 
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add track to playlist';
+
       if (Platform.OS === 'web') {
-        alert('Failed to add track to playlist');
+        alert(errorMessage);
       } else {
-        Alert.alert('Error', 'Failed to add track to playlist');
+        Alert.alert('Error', errorMessage);
       }
     }
   };
 
   const handleCreateNewPlaylist = () => {
-    onClose();
     onPlaylistCreated?.();
   };
 
@@ -80,6 +103,7 @@ export function AddToPlaylistModal({
           <Content
             track={track}
             playlists={playlists}
+            playlistTrackStatus={playlistTrackStatus}
             onClose={onClose}
             onAddToPlaylist={handleAddToPlaylist}
             onCreateNewPlaylist={handleCreateNewPlaylist}
@@ -92,6 +116,7 @@ export function AddToPlaylistModal({
           <Content
             track={track}
             playlists={playlists}
+            playlistTrackStatus={playlistTrackStatus}
             onClose={onClose}
             onAddToPlaylist={handleAddToPlaylist}
             onCreateNewPlaylist={handleCreateNewPlaylist}
@@ -111,6 +136,7 @@ interface ContentProps {
     artist?: { name: string } | null;
   } | null;
   playlists: any[];
+  playlistTrackStatus: Record<string, boolean>;
   onClose: () => void;
   onAddToPlaylist: (playlistId: string, playlistName: string) => void;
   onCreateNewPlaylist: () => void;
@@ -121,6 +147,7 @@ interface ContentProps {
 function Content({
   track,
   playlists,
+  playlistTrackStatus,
   onClose,
   onAddToPlaylist,
   onCreateNewPlaylist,
@@ -175,25 +202,48 @@ function Content({
         </Pressable>
 
         {/* Existing Playlists */}
-        {playlists.map((playlist) => (
-          <Pressable
-            key={playlist.id}
-            style={styles.playlistItem}
-            onPress={() => onAddToPlaylist(playlist.id, playlist.name)}
-          >
-            <View style={[styles.playlistArt, { backgroundColor: tokens.colors.surfaceElevated }]}>
-              <IconSymbol name="music.note.list" size={24} color={tokens.colors.subtleText} />
-            </View>
-            <View style={styles.playlistDetails}>
-              <Text style={[styles.playlistTitle, { color: tokens.colors.text }]} numberOfLines={1}>
-                {playlist.name}
-              </Text>
-              <Text style={[styles.playlistSubtitle, { color: tokens.colors.subtleText }]}>
-                {playlist.trackCount} songs
-              </Text>
-            </View>
-          </Pressable>
-        ))}
+        {playlists.map((playlist) => {
+          const isTrackInPlaylist = playlistTrackStatus[playlist.id] || false;
+          const isDisabled = isTrackInPlaylist;
+          
+          return (
+            <Pressable
+              key={playlist.id}
+              style={[
+                styles.playlistItem,
+                isDisabled && styles.disabledPlaylistItem
+              ]}
+              onPress={() => !isDisabled && onAddToPlaylist(playlist.id, playlist.name)}
+              disabled={isDisabled}
+            >
+              <View style={[
+                styles.playlistArt, 
+                { backgroundColor: tokens.colors.surfaceElevated },
+                isDisabled && { opacity: 0.5 }
+              ]}>
+                <IconSymbol 
+                  name={isTrackInPlaylist ? "checkmark.circle.fill" : "music.note.list"} 
+                  size={24} 
+                  color={isTrackInPlaylist ? tokens.colors.accent : tokens.colors.subtleText} 
+                />
+              </View>
+              <View style={styles.playlistDetails}>
+                <Text style={[
+                  styles.playlistTitle, 
+                  { 
+                    color: isDisabled ? tokens.colors.subtleText : tokens.colors.text,
+                    opacity: isDisabled ? 0.6 : 1
+                  }
+                ]} numberOfLines={1}>
+                  {playlist.name}
+                </Text>
+                <Text style={[styles.playlistSubtitle, { color: tokens.colors.subtleText }]}>
+                  {isTrackInPlaylist ? "Already in playlist" : `${playlist.trackCount} songs`}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
 
         {playlists.length === 0 && (
           <View style={styles.emptyState}>
@@ -204,6 +254,19 @@ function Content({
           </View>
         )}
       </ScrollView>
+
+      {/* Cancel Button */}
+      <View style={styles.cancelButtonContainer}>
+        <Button
+          variant="secondary"
+          onPress={onClose}
+          style={styles.cancelButton}
+        >
+          <Text style={[styles.cancelButtonText, { color: tokens.colors.text }]}>
+            Cancel
+          </Text>
+        </Button>
+      </View>
     </>
   );
 }
@@ -274,6 +337,9 @@ function getStyles(tokens: any) {
       paddingVertical: 12,
       gap: 12,
     },
+    disabledPlaylistItem: {
+      opacity: 0.6,
+    },
     createNewItem: {
       borderBottomWidth: 1,
       borderBottomColor: tokens.colors.border,
@@ -311,6 +377,19 @@ function getStyles(tokens: any) {
       fontSize: 16,
       textAlign: 'center',
       lineHeight: 22,
+    },
+    cancelButtonContainer: {
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      borderTopWidth: 1,
+      borderTopColor: tokens.colors.border,
+    },
+    cancelButton: {
+      width: '100%',
+    },
+    cancelButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
     },
   });
 }

@@ -9,15 +9,18 @@ import {
   View,
 } from "react-native";
 import { PanGestureHandler, Swipeable } from "react-native-gesture-handler";
+import * as DocumentPicker from 'expo-document-picker';
+
+import { useTheme } from "@/src/theme/provider";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { AddToPlaylistModal } from "@/src/components/add-to-playlist-modal";
 import { AlbumsScreen } from "@/src/components/albums-screen";
 import { ArtistsScreen } from "@/src/components/artists-screen";
 import { PlaylistsScreen } from "@/src/components/playlists-screen";
-import { FolderPicker } from "@/src/components/folder-picker";
 import { MiniPlayer } from "@/src/components/mini-player";
 import { NowPlaying } from "@/src/components/now-playing";
+import NowPlayingScreen from "./now-playing";
 import { PlaylistCreationModal } from "@/src/components/playlist-creation-modal";
 import { PlaylistDetailScreen } from "@/src/components/playlist-detail-screen";
 import { SidebarNavigation } from "@/src/components/sidebar-navigation";
@@ -28,11 +31,13 @@ import { DropdownMenu } from "@/src/components/ui/dropdown-menu";
 import { IconButton } from "@/src/components/ui/icon-button";
 import { Text } from "@/src/components/ui/text";
 import { StarlightLogo } from "@/src/components/starlight-logo";
+import { FileScanner } from "@/src/services/file-scanner";
 import {
   clearLibrary,
   deleteTrack,
   hydrateLibraryFromDatabase,
 } from "@/src/services/library-service";
+import { getTrackTags, saveTrackTags, getAllTrackTags } from "@/src/services/tag-service";
 import { playTrack } from "@/src/services/playback-service";
 import {
   hydratePlaylistsFromDatabase,
@@ -41,10 +46,10 @@ import {
 import { useLibraryStore, usePlayerStore, usePlaylistStore } from "@/src/state";
 
 export default function HomeScreen() {
+  const { tokens } = useTheme();
   const { tracks, isLoading } = useLibraryStore();
   const { activeTrack } = usePlayerStore();
   const { playlists } = usePlaylistStore();
-  const [showFolderPicker, setShowFolderPicker] = useState(false);
   const [showNowPlaying, setShowNowPlaying] = useState(false);
   const [showPlaylistCreation, setShowPlaylistCreation] = useState(false);
   const [showAddToPlaylist, setShowAddToPlaylist] = useState(false);
@@ -61,24 +66,174 @@ export default function HomeScreen() {
     useState<any>(null);
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [showGearMenu, setShowGearMenu] = useState(false);
+  const [showAddMusicMenu, setShowAddMusicMenu] = useState(false);
+  const [trackTags, setTrackTags] = useState<{[trackId: string]: string[]}>({});
 
   useEffect(() => {
     hydrateLibraryFromDatabase();
     hydratePlaylistsFromDatabase();
+    loadTrackTags();
   }, []);
 
+  const loadTrackTags = async () => {
+    try {
+      const tags = await getAllTrackTags();
+      setTrackTags(tags);
+    } catch (error) {
+      console.error('Error loading track tags:', error);
+    }
+  };
+
   const handlePickMusicFolders = () => {
-    setShowFolderPicker(true);
+    setShowAddMusicMenu(true);
   };
 
-  const handleScanComplete = () => {
-    setShowFolderPicker(false);
-    hydrateLibraryFromDatabase(); // Refresh the library
+  const handlePickFiles = async () => {
+    try {
+      console.log('Starting file picker...');
+
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/m4a', 'audio/wav', 'audio/flac', 'audio/aac', 'audio/ogg', 'audio/*'],
+        multiple: true,
+        copyToCacheDirectory: true,
+      });
+
+      if (result.assets && result.assets.length > 0) {
+        console.log('Selected files:', result.assets);
+        await scanSelectedFiles(result.assets);
+      } else {
+        console.log('No files selected or picker was canceled');
+        Alert.alert('No Files', 'No files were selected. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error picking files:', error);
+      Alert.alert('Error', 'Failed to pick music files. Please try again.');
+    }
   };
 
-  const handleScanError = (error: Error) => {
-    setShowFolderPicker(false);
-    console.error("Scan error:", error);
+  const handlePickFolder = async () => {
+    try {
+      console.log('Starting folder picker...');
+
+      if (Platform.OS === 'web') {
+        await pickWebFolder();
+      } else {
+        Alert.alert(
+          'Folder Selection Not Available',
+          'Folder selection is not available on mobile platforms. Please select individual music files instead.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Select Files', onPress: handlePickFiles }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error picking folder:', error);
+      Alert.alert('Error', 'Failed to pick folder. Please try again.');
+    }
+  };
+
+  const pickWebFolder = async (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.webkitdirectory = true;
+      input.multiple = true;
+      input.accept = '.mp3,.m4a,.mp4,.flac,.wav,.aac,.ogg,.wma';
+
+      input.onchange = async (event) => {
+        const files = (event.target as HTMLInputElement).files;
+        if (!files || files.length === 0) {
+          reject(new Error('No files selected'));
+          return;
+        }
+
+        try {
+          console.log('Selected folder with', files.length, 'files');
+          
+          const fileArray = Array.from(files);
+          const musicFiles = fileArray
+            .filter(file => {
+              const extension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+              return ['.mp3', '.m4a', '.mp4', '.flac', '.wav', '.aac', '.ogg', '.wma'].includes(extension);
+            })
+            .map(file => ({
+              uri: URL.createObjectURL(file),
+              name: file.name,
+              size: file.size,
+              modificationTime: file.lastModified,
+              file: file
+            }));
+
+          if (musicFiles.length === 0) {
+            Alert.alert('No Music Files', 'No music files found in the selected folder.');
+            resolve();
+            return;
+          }
+
+          console.log('Found', musicFiles.length, 'music files in folder');
+          await scanSelectedFiles(musicFiles);
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      input.oncancel = () => {
+        reject(new Error('Folder selection cancelled'));
+      };
+
+      input.click();
+    });
+  };
+
+  const scanSelectedFiles = async (assets: any[]) => {
+    console.log('Starting file scan with assets:', assets);
+    
+    try {
+      const scanner = new FileScanner(
+        (progress) => {
+          console.log('Scan progress:', progress);
+        },
+        (summary) => {
+          console.log('Scan completed with summary:', summary);
+          hydrateLibraryFromDatabase(); // Refresh the library
+
+          if (summary.skipped > 0) {
+            Alert.alert(
+              'Import Complete',
+              `Added ${summary.added} new track(s)\nSkipped ${summary.skipped} duplicate(s)\nTotal processed: ${summary.total} file(s)`
+            );
+          } else {
+            Alert.alert(
+              'Import Complete',
+              `Successfully added ${summary.added} track(s) to your library!`
+            );
+          }
+        },
+        (error) => {
+          console.error('Scan error:', error);
+          Alert.alert('Error', `Scan failed: ${error.message}`);
+        }
+      );
+
+      const musicFiles = assets.map(asset => ({
+        uri: asset.uri,
+        name: asset.name || 'Unknown',
+        size: asset.size || 0,
+        modificationTime: asset.lastModified ? asset.lastModified * 1000 : Date.now(),
+      }));
+
+      console.log('Converted music files:', musicFiles);
+      await scanner.processMusicFiles(musicFiles);
+      
+      console.log('File processing completed');
+      hydrateLibraryFromDatabase();
+      Alert.alert('Success', `Found ${musicFiles.length} music file(s)! Files have been added to your library.`);
+    } catch (error) {
+      console.error('Error in scanSelectedFiles:', error);
+      Alert.alert('Error', 'Failed to process music files. Please try again.');
+    }
   };
 
   const handleDeleteTrack = (track: any) => {
@@ -221,15 +376,6 @@ export default function HomeScreen() {
     );
   };
 
-  if (showFolderPicker) {
-    return (
-      <FolderPicker
-        onScanComplete={handleScanComplete}
-        onScanError={handleScanError}
-        onBack={() => setShowFolderPicker(false)}
-      />
-    );
-  }
 
   if (selectedPlaylistId) {
     return (
@@ -253,46 +399,49 @@ export default function HomeScreen() {
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <View style={[styles.container, { backgroundColor: tokens.colors.background }]}>
       {/* Desktop-style Header */}
-      <View className="h-15 px-5 justify-center border-b border-border bg-card">
-        <View className="flex-row items-center justify-between">
+      <View style={[styles.header, { 
+        backgroundColor: tokens.colors.surface,
+        borderBottomColor: tokens.colors.background 
+      }]}>
+        <View style={styles.headerCenter}>
           <StarlightLogo
             width={130}
             height={25}
-            color="hsl(270 85% 65%)"
+            color={tokens.colors.primary}
           />
-          <View className="flex-row items-center gap-3">
-            <Button
-              size="sm"
-              variant="primary"
-              className="flex-row items-center px-3 py-1.5 rounded-md gap-1.5"
-              onPress={handlePickMusicFolders}
-            >
-              <IconSymbol
-                name="plus"
-                size={16}
-                color="hsl(0 0% 98%)"
-              />
-              <Text className="text-primary-foreground text-xs font-semibold">
-                Add Music
-              </Text>
-            </Button>
-            <IconButton
-              icon={
-                <IconSymbol name="gear" size={24} color="hsl(0 0% 98%)" />
-              }
-              accessibilityLabel="Settings"
-              onPress={() => {
-                setShowGearMenu(true);
-              }}
+        </View>
+        <View style={styles.headerRight}>
+          <Button
+            size="sm"
+            variant="primary"
+            className="flex-row items-center px-3 py-1.5 rounded-md gap-1.5"
+            onPress={handlePickMusicFolders}
+          >
+            <IconSymbol
+              name="plus"
+              size={16}
+              color={tokens.colors.onPrimary}
             />
-          </View>
+            <Text className="text-primary-foreground text-xs font-semibold">
+              Add Music
+            </Text>
+          </Button>
+          <IconButton
+            icon={
+              <IconSymbol name="gear" size={24} color={tokens.colors.text} />
+            }
+            accessibilityLabel="Settings"
+            onPress={() => {
+              setShowGearMenu(true);
+            }}
+          />
         </View>
       </View>
 
       {/* Main Content Area */}
-      <View className="flex-1 flex-row">
+      <View style={styles.mainContent}>
         {/* Sidebar */}
         <View style={{ width: sidebarWidth }}>
           <SidebarNavigation
@@ -310,11 +459,11 @@ export default function HomeScreen() {
             }
           }}
         >
-          <View className="w-5 h-full justify-center items-center bg-border" />
+          <View style={[styles.divider, { backgroundColor: tokens.colors.background }]} />
         </PanGestureHandler>
 
         {/* Content Area */}
-        <View className="flex-1 bg-background">
+        <View style={[styles.contentArea, { backgroundColor: tokens.colors.background }]}>
           {sidebarView === "library" ? (
             tracks.length > 0 ? (
               <TableView
@@ -326,7 +475,7 @@ export default function HomeScreen() {
                   durationMs: track.durationMs,
                   genre: "Dubstep", // Mock genre for now
                   bpm: 140, // Mock BPM for now
-                  tags: ["Banger", "Dancefloor", "Headline", "Peak-time"], // Mock tags for now
+                  tags: trackTags[track.id] || [], // Get stored tags for this track
                 }))}
                 onTrackPress={(track) =>
                   playTrack(tracks.find((t) => t.id === track.id)!)
@@ -340,6 +489,13 @@ export default function HomeScreen() {
                 onTrackShowPlaylists={(track) => {
                   // TODO: Implement show playlists functionality
                   console.log("Show playlists for track:", track.title);
+                }}
+                onTrackTag={(track) => {
+                  const actualTrack = tracks.find((t) => t.id === track.id);
+                  if (actualTrack) {
+                    setSelectedTrackForTagging(actualTrack);
+                    setShowTagManager(true);
+                  }
                 }}
                 onBulkDelete={(tracks) => {
                   console.log(
@@ -357,18 +513,18 @@ export default function HomeScreen() {
                 }}
               />
             ) : (
-              <View className="flex-1 justify-center items-center px-10 pt-20">
-                <View className="w-25 h-25 rounded-full justify-center items-center mb-6 bg-card">
+              <View style={styles.emptyState}>
+                <View style={[styles.emptyStateIcon, { backgroundColor: tokens.colors.surface }]}>
                   <IconSymbol
                     name="music.note.list"
                     size={48}
-                    color="hsl(0 0% 63%)"
+                    color={tokens.colors.subtleText}
                   />
                 </View>
-                <Text className="text-foreground text-2xl font-bold text-center mb-2">
+                <Text style={[styles.emptyStateTitle, { color: tokens.colors.text }]}>
                   Your Music Lives Here
                 </Text>
-                <Text className="text-muted-foreground text-base text-center mb-8 leading-6">
+                <Text style={[styles.emptyStateSubtitle, { color: tokens.colors.subtleText }]}>
                   Add your favorite songs and albums to get started
                 </Text>
                 <Button
@@ -379,6 +535,8 @@ export default function HomeScreen() {
                 </Button>
               </View>
             )
+          ) : sidebarView === "now-playing" ? (
+            <NowPlayingScreen />
           ) : sidebarView === "artists" ? (
             <ArtistsScreen onBack={() => setSidebarView("library")} />
           ) : sidebarView === "albums" ? (
@@ -386,14 +544,14 @@ export default function HomeScreen() {
           ) : sidebarView === "playlists" ? (
             <PlaylistsScreen onPlaylistPress={handlePlaylistPress} />
           ) : sidebarView === "genres" ? (
-            <View className="flex-1 justify-center items-center px-10">
-              <Text className="text-foreground text-lg font-medium text-center">
+            <View style={styles.placeholderView}>
+              <Text style={[styles.placeholderText, { color: tokens.colors.text }]}>
                 Genres view coming soon...
               </Text>
             </View>
           ) : (
-            <View className="flex-1 justify-center items-center px-10">
-              <Text className="text-foreground text-lg font-medium text-center">
+            <View style={styles.placeholderView}>
+              <Text style={[styles.placeholderText, { color: tokens.colors.text }]}>
                 {sidebarView} view coming soon...
               </Text>
             </View>
@@ -421,9 +579,20 @@ export default function HomeScreen() {
       {/* Playlist Creation Modal */}
       <PlaylistCreationModal
         visible={showPlaylistCreation}
-        onClose={() => setShowPlaylistCreation(false)}
+        onClose={() => {
+          setShowPlaylistCreation(false);
+          // If we came from the Add to Playlist modal, return to it
+          if (selectedTrack) {
+            setShowAddToPlaylist(true);
+          }
+        }}
         onPlaylistCreated={() => {
           hydratePlaylistsFromDatabase();
+          // If we came from the Add to Playlist modal, return to it
+          if (selectedTrack) {
+            setShowPlaylistCreation(false);
+            setShowAddToPlaylist(true);
+          }
         }}
       />
 
@@ -437,7 +606,6 @@ export default function HomeScreen() {
         track={selectedTrack}
         onPlaylistCreated={() => {
           setShowAddToPlaylist(false);
-          setSelectedTrack(null);
           setShowPlaylistCreation(true);
         }}
       />
@@ -450,10 +618,20 @@ export default function HomeScreen() {
           setSelectedTrackForTagging(null);
         }}
         trackId={selectedTrackForTagging?.id}
-        currentTags={["Banger", "Dancefloor"]} // Mock current tags
-        onTagsUpdate={(tags) => {
-          console.log("Tags updated:", tags);
-          // Here you would update the track's tags in the database
+        currentTags={selectedTrackForTagging ? (trackTags[selectedTrackForTagging.id] || []) : []}
+        onTagsUpdate={async (tags) => {
+          if (selectedTrackForTagging) {
+            try {
+              await saveTrackTags(selectedTrackForTagging.id, tags);
+              setTrackTags(prev => ({
+                ...prev,
+                [selectedTrackForTagging.id]: tags
+              }));
+              console.log("Tags updated for track:", selectedTrackForTagging.id, tags);
+            } catch (error) {
+              console.error('Error saving tags:', error);
+            }
+          }
         }}
       />
 
@@ -465,12 +643,15 @@ export default function HomeScreen() {
         onRequestClose={() => setShowGearMenu(false)}
       >
         <Pressable
-          className="flex-1 bg-black/10"
+          style={[styles.modalBackdrop, { backgroundColor: 'rgba(0,0,0,0.1)' }]}
           onPress={() => setShowGearMenu(false)}
         >
-          <View className="absolute top-20 right-5 w-50 rounded-lg shadow-lg shadow-black/25 border border-border bg-card">
+          <View style={[styles.modalMenu, { 
+            backgroundColor: tokens.colors.surface,
+            borderColor: tokens.colors.border 
+          }]}>
             <Pressable
-              className="py-3 px-4 border-b border-border"
+              style={[styles.menuItem, { borderBottomColor: tokens.colors.background }]}
               onPress={() => {
                 setShowGearMenu(false);
                 handleClearLibrary();
@@ -481,7 +662,7 @@ export default function HomeScreen() {
                   <IconSymbol
                     name="trash"
                     size={16}
-                    color="hsl(0 84% 60%)"
+                    color={tokens.colors.danger}
                   />
                 </View>
                 <Text className="text-destructive text-sm font-medium">
@@ -490,7 +671,7 @@ export default function HomeScreen() {
               </View>
             </Pressable>
             <Pressable
-              className="py-3 px-4"
+              style={styles.menuItem}
               onPress={() => {
                 setShowGearMenu(false);
                 handleClearAllPlaylists();
@@ -501,7 +682,7 @@ export default function HomeScreen() {
                   <IconSymbol
                     name="trash"
                     size={16}
-                    color="hsl(0 84% 60%)"
+                    color={tokens.colors.danger}
                   />
                 </View>
                 <Text className="text-destructive text-sm font-medium">
@@ -512,11 +693,174 @@ export default function HomeScreen() {
           </View>
         </Pressable>
       </Modal>
+
+      {/* Add Music Menu Modal */}
+      <Modal
+        visible={showAddMusicMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAddMusicMenu(false)}
+      >
+        <Pressable
+          style={[styles.modalBackdrop, { backgroundColor: 'rgba(0,0,0,0.1)' }]}
+          onPress={() => setShowAddMusicMenu(false)}
+        >
+          <View style={[styles.modalMenu, { 
+            backgroundColor: tokens.colors.surface,
+            borderColor: tokens.colors.border 
+          }]}>
+            <Pressable
+              style={[styles.menuItem, { borderBottomColor: tokens.colors.background }]}
+              onPress={() => {
+                setShowAddMusicMenu(false);
+                handlePickFolder();
+              }}
+            >
+              <View className="flex-row items-center">
+                <View className="w-5 items-center mr-3">
+                  <IconSymbol
+                    name="folder"
+                    size={16}
+                    color={tokens.colors.text}
+                  />
+                </View>
+                <Text className="text-foreground text-sm font-medium">
+                  {Platform.OS === 'web' ? 'Select Music Folder' : 'Select Music Files'}
+                </Text>
+              </View>
+            </Pressable>
+            {Platform.OS === 'web' && (
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => {
+                setShowAddMusicMenu(false);
+                handlePickFiles();
+              }}
+            >
+                <View className="flex-row items-center">
+                  <View className="w-5 items-center mr-3">
+                    <IconSymbol
+                      name="music.note"
+                      size={16}
+                      color={tokens.colors.text}
+                    />
+                  </View>
+                  <Text className="text-foreground text-sm font-medium">
+                    Select Individual Files
+                  </Text>
+                </View>
+              </Pressable>
+            )}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
-// Styles removed - now using NativeWind classes
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  headerCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerRight: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  mainContent: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  divider: {
+    width: 4,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  contentArea: {
+    flex: 1,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingTop: 80,
+  },
+  emptyStateIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  emptyStateTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptyStateSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  placeholderView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  placeholderText: {
+    fontSize: 18,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  modalBackdrop: {
+    flex: 1,
+  },
+  modalMenu: {
+    position: 'absolute',
+    top: 80,
+    right: 20,
+    width: 200,
+    borderRadius: 8,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  menuItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+  },
+});
 
 function formatTrackDuration(duration?: number | null) {
   if (!duration) return "";

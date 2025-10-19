@@ -1,35 +1,11 @@
-import { Tabs } from 'expo-router';
+import { Stack } from 'expo-router';
 import React from 'react';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
-      <Tabs.Screen
-        name="library"
-        options={{
-          title: 'Library',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="music.note.list" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="now-playing"
-        options={{
-          title: 'Now Playing',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="play.fill" color={color} />,
-        }}
-      />
-    </Tabs>
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="library" options={{ headerShown: false }} />
+      <Stack.Screen name="now-playing" options={{ headerShown: false }} />
+    </Stack>
   );
 }

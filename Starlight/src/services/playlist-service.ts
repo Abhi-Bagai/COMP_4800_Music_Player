@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import {
   addTrackToPlaylist,
   createPlaylist,
@@ -43,8 +44,15 @@ export async function createNewPlaylist(data: CreatePlaylistData) {
 }
 
 export async function addTrackToPlaylistById(playlistId: string, trackId: string) {
-  await addTrackToPlaylist(playlistId, trackId);
-  await hydratePlaylistsFromDatabase();
+  try {
+    await addTrackToPlaylist(playlistId, trackId);
+    await hydratePlaylistsFromDatabase();
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Track already exists in this playlist') {
+      throw new Error('This track is already in the playlist');
+    }
+    throw error;
+  }
 }
 
 export async function removeTrackFromPlaylistById(playlistId: string, trackId: string) {
@@ -64,6 +72,22 @@ export async function updatePlaylistById(playlistId: string, data: Partial<Creat
 
 export async function getPlaylistDetails(playlistId: string): Promise<PlaylistWithTracks | null> {
   return await getPlaylistWithTracks(playlistId);
+}
+
+export async function isTrackInPlaylist(playlistId: string, trackId: string): Promise<boolean> {
+  try {
+    if (Platform.OS === 'web') {
+      const { idbIsTrackInPlaylist } = await import('@/src/db/indexeddb');
+      return await idbIsTrackInPlaylist(playlistId, trackId);
+    } else {
+      const playlist = await getPlaylistWithTracks(playlistId);
+      if (!playlist) return false;
+      return playlist.tracks.some(entry => entry.track.id === trackId);
+    }
+  } catch (error) {
+    console.error('Error checking if track is in playlist:', error);
+    return false;
+  }
 }
 
 export async function clearAllPlaylistsService() {
