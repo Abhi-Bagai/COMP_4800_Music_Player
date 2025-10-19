@@ -171,6 +171,7 @@ interface ContextMenuProps {
   track: Track | null;
   selectedTracks: Track[];
   onClose: () => void;
+  onPlay: (track: Track) => void;
   onAddToPlaylist: (track: Track) => void;
   onDelete: (track: Track) => void;
   onShowPlaylists: (track: Track) => void;
@@ -197,6 +198,7 @@ function ContextMenu({
   track,
   selectedTracks,
   onClose,
+  onPlay,
   onAddToPlaylist,
   onDelete,
   onShowPlaylists,
@@ -211,6 +213,15 @@ function ContextMenu({
   const currentTrack = track || selectedTracks[0];
 
   const menuItems = [
+    {
+      label: "Play",
+      icon: "play.fill",
+      onPress: () => {
+        onPlay(currentTrack);
+        onClose();
+      },
+      disabled: hasMultipleSelected,
+    },
     {
       label: hasMultipleSelected
         ? `Add ${selectedTracks.length} tracks to Playlists`
@@ -347,23 +358,40 @@ function TableRow({
   };
 
   const handleLongPress = (event: any) => {
-    // For web, we'll use onPress with a modifier key check
     // For mobile, we'll use onLongPress
     const { pageX, pageY } = event.nativeEvent;
     onContextMenu(track, { x: pageX, y: pageY });
+  };
+
+  const handlePress = (event: any) => {
+    // Regular left-click
+    onPress(track);
+  };
+
+  const handleContextMenu = (event: any) => {
+    // Handle right-click context menu on web
+    if (Platform.OS === "web") {
+      event.preventDefault();
+      const { pageX, pageY } = event.nativeEvent;
+      onContextMenu(track, { x: pageX, y: pageY });
+    }
   };
 
   return (
     <Pressable
       style={[styles.row]}
       className={`${isPressed ? 'bg-card' : isHovered ? 'bg-card' : 'bg-transparent'}`}
-      onPress={() => onPress(track)}
+      onPress={handlePress}
       onLongPress={handleLongPress}
       delayLongPress={500}
       onPressIn={() => setIsPressed(true)}
       onPressOut={() => setIsPressed(false)}
       onHoverIn={Platform.OS === "web" ? () => setIsHovered(true) : undefined}
       onHoverOut={Platform.OS === "web" ? () => setIsHovered(false) : undefined}
+      // Handle right-click context menu on web
+      {...(Platform.OS === "web" && {
+        onContextMenu: handleContextMenu,
+      })}
     >
       {columns.map((column, columnIndex) => {
         let content;
@@ -751,6 +779,7 @@ export function TableView({
         track={contextMenu.track}
         selectedTracks={getSelectedTracksArray()}
         onClose={closeContextMenu}
+        onPlay={(track) => onTrackPress(track)}
         onAddToPlaylist={(track) => onTrackAddToPlaylist?.(track)}
         onDelete={(track) => onTrackDelete?.(track)}
         onShowPlaylists={(track) => onTrackShowPlaylists?.(track)}

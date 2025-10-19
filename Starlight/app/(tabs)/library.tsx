@@ -421,9 +421,20 @@ export default function HomeScreen() {
       {/* Playlist Creation Modal */}
       <PlaylistCreationModal
         visible={showPlaylistCreation}
-        onClose={() => setShowPlaylistCreation(false)}
+        onClose={() => {
+          setShowPlaylistCreation(false);
+          // If we came from the Add to Playlist modal, return to it
+          if (selectedTrack) {
+            setShowAddToPlaylist(true);
+          }
+        }}
         onPlaylistCreated={() => {
           hydratePlaylistsFromDatabase();
+          // If we came from the Add to Playlist modal, return to it
+          if (selectedTrack) {
+            setShowPlaylistCreation(false);
+            setShowAddToPlaylist(true);
+          }
         }}
       />
 
@@ -437,7 +448,6 @@ export default function HomeScreen() {
         track={selectedTrack}
         onPlaylistCreated={() => {
           setShowAddToPlaylist(false);
-          setSelectedTrack(null);
           setShowPlaylistCreation(true);
         }}
       />
