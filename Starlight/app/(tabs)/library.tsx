@@ -14,6 +14,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { AddToPlaylistModal } from "@/src/components/add-to-playlist-modal";
 import { AlbumsScreen } from "@/src/components/albums-screen";
 import { ArtistsScreen } from "@/src/components/artists-screen";
+import { PlaylistsScreen } from "@/src/components/playlists-screen";
 import { FolderPicker } from "@/src/components/folder-picker";
 import { MiniPlayer } from "@/src/components/mini-player";
 import { NowPlaying } from "@/src/components/now-playing";
@@ -382,6 +383,8 @@ export default function HomeScreen() {
             <ArtistsScreen onBack={() => setSidebarView("library")} />
           ) : sidebarView === "albums" ? (
             <AlbumsScreen onBack={() => setSidebarView("library")} />
+          ) : sidebarView === "playlists" ? (
+            <PlaylistsScreen onPlaylistPress={handlePlaylistPress} />
           ) : sidebarView === "genres" ? (
             <View className="flex-1 justify-center items-center px-10">
               <Text className="text-foreground text-lg font-medium text-center">
