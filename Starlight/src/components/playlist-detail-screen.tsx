@@ -213,9 +213,9 @@ export function PlaylistDetailScreen({
                 {playlist.name}
               </Text>
               <IconButton
-                icon={<IconSymbol name="ellipsis" size={24} color={tokens.colors.text} />}
+                icon={<IconSymbol name="trash" size={24} color={tokens.colors.danger} />}
                 onPress={handleDeletePlaylist}
-                accessibilityLabel="More options"
+                accessibilityLabel="Delete playlist"
               />
             </View>
 

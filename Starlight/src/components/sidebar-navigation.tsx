@@ -41,6 +41,11 @@ const navigationItems: NavigationItem[] = [
     icon: "opticaldisc",
   },
   {
+    id: "playlists",
+    label: "Playlists",
+    icon: "music.note.list",
+  },
+  {
     id: "genres",
     label: "Genres",
     icon: "music.note",
