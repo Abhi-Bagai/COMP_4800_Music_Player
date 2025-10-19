@@ -251,23 +251,37 @@ function AlbumDetailView({ album, onBack, onPlayAlbum, onShuffleAlbum, tokens }:
               {
                 backgroundColor: pressed
                   ? tokens.colors.surfaceElevated
-                  : 'transparent',
+                  : tokens.colors.surface,
               },
             ]}
             onPress={() => playTrack(track)}
           >
             <View style={styles.trackContent}>
-              <Text style={[styles.trackNumber, { color: tokens.colors.subtleText }]}>
-                {track.trackNumber || '—'}
-              </Text>
+              {/* Album Artwork Placeholder */}
+              <View style={[styles.albumArt, { backgroundColor: tokens.colors.surfaceElevated }]}>
+                <IconSymbol name="music.note" size={20} color={tokens.colors.subtleText} />
+              </View>
+
+              {/* Track Info */}
               <View style={styles.trackInfo}>
-                <Text style={[styles.trackTitle, { color: tokens.colors.text }]} numberOfLines={1}>
+                <Text
+                  style={[styles.trackTitle, { color: tokens.colors.text }]}
+                  numberOfLines={1}
+                >
                   {track.title}
                 </Text>
-                <Text style={[styles.trackDuration, { color: tokens.colors.subtleText }]}>
-                  {formatTrackDuration(track.durationMs)}
+                <Text
+                  style={[styles.trackSubtitle, { color: tokens.colors.subtleText }]}
+                  numberOfLines={1}
+                >
+                  {track.artist?.name ?? 'Unknown Artist'} • {track.album?.title ?? 'Unknown Album'}
                 </Text>
               </View>
+
+              {/* Track Duration */}
+              <Text style={[styles.trackDuration, { color: tokens.colors.subtleText }]}>
+                {formatTrackDuration(track.durationMs)}
+              </Text>
             </View>
           </Pressable>
         )}
@@ -414,24 +428,29 @@ function getStyles(tokens: any) {
       alignItems: 'center',
       gap: 16,
     },
-    trackNumber: {
-      width: 24,
-      fontSize: 14,
-      textAlign: 'center',
+    albumArt: {
+      width: 48,
+      height: 48,
+      borderRadius: 6,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     trackInfo: {
       flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      gap: 2,
     },
     trackTitle: {
-      flex: 1,
-      fontSize: 15,
-      fontWeight: '400',
+      fontSize: 16,
+      fontWeight: '500',
+      lineHeight: 20,
+    },
+    trackSubtitle: {
+      fontSize: 14,
+      lineHeight: 18,
     },
     trackDuration: {
       fontSize: 14,
+      fontWeight: '400',
     },
 
     // Empty State
