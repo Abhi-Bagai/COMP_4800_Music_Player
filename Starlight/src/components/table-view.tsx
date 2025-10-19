@@ -14,6 +14,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { IconButton } from "@/src/components/ui/icon-button";
 import { Text } from "@/src/components/ui/text";
 import { useTheme } from "@/src/theme/provider";
+import { usePlayerStore } from "@/src/state";
 
 interface Track {
   id: string;
@@ -352,8 +353,12 @@ function TableRow({
   onToggleSelect,
 }: TableRowProps) {
   const { tokens } = useTheme();
+  const { activeTrack, isPlaying } = usePlayerStore();
   const [isHovered, setIsHovered] = React.useState(false);
   const [isPressed, setIsPressed] = React.useState(false);
+
+  // Check if this track is currently playing
+  const isCurrentlyPlaying = activeTrack?.id === track.id && isPlaying;
 
   const getSourceIcon = () => {
     // You can customize this based on track source
@@ -399,7 +404,9 @@ function TableRow({
       style={[
         styles.row,
         {
-          backgroundColor: isPressed 
+          backgroundColor: isCurrentlyPlaying
+            ? tokens.colors.primary + '20' // Semi-transparent primary color for currently playing
+            : isPressed 
             ? tokens.colors.surfaceElevated 
             : isHovered 
             ? tokens.colors.surfaceElevated 

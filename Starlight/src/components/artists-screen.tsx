@@ -1,7 +1,7 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { IconButton } from '@/src/components/ui/icon-button';
 import { playTrack } from '@/src/services/playback-service';
-import { useLibraryStore } from '@/src/state';
+import { useLibraryStore, usePlayerStore } from '@/src/state';
 import { useTheme } from '@/src/theme/provider';
 import React, { useEffect, useState } from 'react';
 import {
@@ -215,6 +215,8 @@ interface ArtistDetailViewProps {
 
 function ArtistDetailView({ artist, onBack, onPlayAlbum, tokens }: ArtistDetailViewProps & { tokens: any }) {
   const styles = getStyles(tokens);
+  const { activeTrack, isPlaying } = usePlayerStore();
+
   return (
     <>
       <View style={styles.header}>
@@ -274,18 +276,23 @@ function ArtistDetailView({ artist, onBack, onPlayAlbum, tokens }: ArtistDetailV
             </View>
           </View>
         )}
-        renderItem={({ item: track }) => (
-          <Pressable
-            style={({ pressed }) => [
-              styles.trackItem,
-              {
-                backgroundColor: pressed
-                  ? tokens.colors.surfaceElevated
-                  : tokens.colors.surface,
-              },
-            ]}
-            onPress={() => playTrack(track)}
-          >
+        renderItem={({ item: track }) => {
+          const isCurrentlyPlaying = activeTrack?.id === track.id && isPlaying;
+          
+          return (
+            <Pressable
+              style={({ pressed }) => [
+                styles.trackItem,
+                {
+                  backgroundColor: isCurrentlyPlaying
+                    ? tokens.colors.primary + '20' // Semi-transparent primary color for currently playing
+                    : pressed
+                    ? tokens.colors.surfaceElevated
+                    : tokens.colors.surface,
+                },
+              ]}
+              onPress={() => playTrack(track)}
+            >
             <View style={styles.trackContent}>
               {/* Album Artwork Placeholder */}
               <View style={[styles.albumArt, { backgroundColor: tokens.colors.surfaceElevated }]}>
@@ -314,7 +321,8 @@ function ArtistDetailView({ artist, onBack, onPlayAlbum, tokens }: ArtistDetailV
               </Text>
             </View>
           </Pressable>
-        )}
+          );
+        }}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.contentContainer}
         stickySectionHeadersEnabled={false}

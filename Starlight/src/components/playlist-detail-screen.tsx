@@ -38,7 +38,7 @@ export function PlaylistDetailScreen({
 }: PlaylistDetailScreenProps) {
   const { tokens } = useTheme();
   const styles = getStyles(tokens);
-  const { activeTrack } = usePlayerStore();
+  const { activeTrack, isPlaying } = usePlayerStore();
   const [playlist, setPlaylist] = useState<PlaylistWithTracks | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showNowPlaying, setShowNowPlaying] = useState(false);
@@ -285,30 +285,35 @@ export function PlaylistDetailScreen({
             </Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <Swipeable
-            overshootRight={false}
-            renderRightActions={() => (
-              <Pressable
-                onPress={() => handleRemoveTrack(item)}
-                style={[styles.swipeRemove, { backgroundColor: tokens.colors.danger }]}
-                accessibilityLabel="Remove from playlist"
-              >
-                <IconSymbol name="minus" size={20} color={tokens.colors.surface} />
-              </Pressable>
-            )}
-          >
-            <Pressable
-              style={({ pressed }) => [
-                styles.trackItem,
-                {
-                  backgroundColor: pressed
-                    ? tokens.colors.surfaceElevated
-                    : tokens.colors.surface,
-                },
-              ]}
-              onPress={() => playTrack(item.track as any)}
+        renderItem={({ item }) => {
+          const isCurrentlyPlaying = activeTrack?.id === item.track.id && isPlaying;
+          
+          return (
+            <Swipeable
+              overshootRight={false}
+              renderRightActions={() => (
+                <Pressable
+                  onPress={() => handleRemoveTrack(item)}
+                  style={[styles.swipeRemove, { backgroundColor: tokens.colors.danger }]}
+                  accessibilityLabel="Remove from playlist"
+                >
+                  <IconSymbol name="minus" size={20} color={tokens.colors.surface} />
+                </Pressable>
+              )}
             >
+              <Pressable
+                style={({ pressed }) => [
+                  styles.trackItem,
+                  {
+                    backgroundColor: isCurrentlyPlaying
+                      ? tokens.colors.primary + '20' // Semi-transparent primary color for currently playing
+                      : pressed
+                      ? tokens.colors.surfaceElevated
+                      : tokens.colors.surface,
+                  },
+                ]}
+                onPress={() => playTrack(item.track as any)}
+              >
               <View style={styles.trackContent}>
                 {/* Album Artwork Placeholder */}
                 <View style={[styles.albumArt, { backgroundColor: tokens.colors.surfaceElevated }]}>
@@ -338,7 +343,8 @@ export function PlaylistDetailScreen({
               </View>
             </Pressable>
           </Swipeable>
-        )}
+          );
+        }}
         keyExtractor={(item) => item.id}
         contentContainerStyle={[
           styles.contentContainer,
