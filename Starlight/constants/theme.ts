@@ -4,7 +4,7 @@ import type { ThemeMode } from '@/src/theme/tokens';
 import { getTokens } from '@/src/theme/tokens';
 
 const tintColorLight = '#2563EB';
-const tintColorDark = '#60A5FA';
+const tintColorDark = '#C678FF'; // Vibrant purple to match new theme
 
 export const Colors = {
   light: {

@@ -67,8 +67,13 @@ function TableHeader({
 
   return (
     <View
-      style={[styles.header]}
-      className="flex-row py-3 px-4 border-b border-border bg-card"
+      style={[
+        styles.header,
+        {
+          backgroundColor: tokens.colors.surface,
+          borderBottomColor: tokens.colors.background,
+        },
+      ]}
     >
       {columns.map((column, index) => {
         const isAllSelected =
@@ -137,7 +142,7 @@ function TableHeader({
                 <View
                   style={[
                     styles.columnDivider,
-                    { backgroundColor: tokens.colors.border },
+                    { backgroundColor: tokens.colors.background },
                   ]}
                 />
                 <PanGestureHandler
@@ -379,8 +384,17 @@ function TableRow({
 
   return (
     <Pressable
-      style={[styles.row]}
-      className={`${isPressed ? 'bg-card' : isHovered ? 'bg-card' : 'bg-transparent'}`}
+      style={[
+        styles.row,
+        {
+          backgroundColor: isPressed 
+            ? tokens.colors.surfaceElevated 
+            : isHovered 
+            ? tokens.colors.surfaceElevated 
+            : tokens.colors.surface,
+          borderBottomColor: tokens.colors.background,
+        },
+      ]}
       onPress={handlePress}
       onLongPress={handleLongPress}
       delayLongPress={500}
@@ -541,26 +555,6 @@ function TableRow({
               </ScrollView>
             );
             break;
-          case "actions":
-            content = onDelete ? (
-              <IconButton
-                size="sm"
-                tone="danger"
-                icon={
-                  <IconSymbol
-                    name="trash"
-                    size={16}
-                    color={tokens.colors.danger}
-                  />
-                }
-                onPress={(e) => {
-                  e.stopPropagation();
-                  onDelete(track);
-                }}
-                accessibilityLabel={`Delete ${track.title}`}
-              />
-            ) : null;
-            break;
           default:
             content = null;
         }
@@ -571,7 +565,7 @@ function TableRow({
               style={[
                 styles.cell,
                 { width: column.width },
-                column.key === "source" || column.key === "actions"
+                column.key === "source"
                   ? { alignItems: "center" }
                   : {},
                 column.key === "tags"
@@ -585,7 +579,7 @@ function TableRow({
               <View
                 style={[
                   styles.columnDivider,
-                  { backgroundColor: tokens.colors.border },
+                  { backgroundColor: tokens.colors.background },
                 ]}
               />
             )}
@@ -621,7 +615,6 @@ export function TableView({
     { key: "bpm", label: "BPM", width: 60 },
     { key: "genre", label: "Genre", width: 100 },
     { key: "tags", label: "Tags", width: 200 },
-    { key: "actions", label: "", width: 60 },
   ]);
   const [selectedTracks, setSelectedTracks] = React.useState<Set<string>>(
     new Set()
@@ -738,8 +731,10 @@ export function TableView({
 
   return (
     <View
-      style={[styles.container]}
-      className="flex-1 bg-background"
+      style={[
+        styles.container,
+        { backgroundColor: tokens.colors.background }
+      ]}
     >
       <TableHeader
         onSort={handleSort}
@@ -798,8 +793,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+    borderBottomWidth: 2,
   },
   headerCellContainer: {
     flexDirection: "row",
@@ -839,8 +833,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.05)",
+    borderBottomWidth: 2,
   },
   cell: {
     paddingHorizontal: 8,

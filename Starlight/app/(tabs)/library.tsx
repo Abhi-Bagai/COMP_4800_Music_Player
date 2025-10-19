@@ -11,6 +11,8 @@ import {
 import { PanGestureHandler, Swipeable } from "react-native-gesture-handler";
 import * as DocumentPicker from 'expo-document-picker';
 
+import { useTheme } from "@/src/theme/provider";
+
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { AddToPlaylistModal } from "@/src/components/add-to-playlist-modal";
 import { AlbumsScreen } from "@/src/components/albums-screen";
@@ -43,6 +45,7 @@ import {
 import { useLibraryStore, usePlayerStore, usePlaylistStore } from "@/src/state";
 
 export default function HomeScreen() {
+  const { tokens } = useTheme();
   const { tracks, isLoading } = useLibraryStore();
   const { activeTrack } = usePlayerStore();
   const { playlists } = usePlaylistStore();
@@ -395,17 +398,20 @@ export default function HomeScreen() {
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <View style={[styles.container, { backgroundColor: tokens.colors.background }]}>
       {/* Desktop-style Header */}
-      <View className="py-3 px-4 border-b border-border bg-card">
-        <View className="flex-row items-center justify-center">
+      <View style={[styles.header, { 
+        backgroundColor: tokens.colors.surface,
+        borderBottomColor: tokens.colors.border 
+      }]}>
+        <View style={styles.headerCenter}>
           <StarlightLogo
             width={130}
             height={25}
-            color="hsl(270 85% 65%)"
+            color={tokens.colors.primary}
           />
         </View>
-        <View className="absolute top-3 right-4 flex-row items-center gap-3">
+        <View style={styles.headerRight}>
           <Button
             size="sm"
             variant="primary"
@@ -415,7 +421,7 @@ export default function HomeScreen() {
             <IconSymbol
               name="plus"
               size={16}
-              color="hsl(0 0% 98%)"
+              color={tokens.colors.onPrimary}
             />
             <Text className="text-primary-foreground text-xs font-semibold">
               Add Music
@@ -423,7 +429,7 @@ export default function HomeScreen() {
           </Button>
           <IconButton
             icon={
-              <IconSymbol name="gear" size={24} color="hsl(0 0% 98%)" />
+              <IconSymbol name="gear" size={24} color={tokens.colors.text} />
             }
             accessibilityLabel="Settings"
             onPress={() => {
@@ -434,7 +440,7 @@ export default function HomeScreen() {
       </View>
 
       {/* Main Content Area */}
-      <View className="flex-1 flex-row">
+      <View style={styles.mainContent}>
         {/* Sidebar */}
         <View style={{ width: sidebarWidth }}>
           <SidebarNavigation
@@ -452,11 +458,11 @@ export default function HomeScreen() {
             }
           }}
         >
-          <View className="w-5 h-full justify-center items-center bg-border" />
+          <View style={[styles.divider, { backgroundColor: tokens.colors.border }]} />
         </PanGestureHandler>
 
         {/* Content Area */}
-        <View className="flex-1 bg-background">
+        <View style={[styles.contentArea, { backgroundColor: tokens.colors.background }]}>
           {sidebarView === "library" ? (
             tracks.length > 0 ? (
               <TableView
@@ -499,18 +505,18 @@ export default function HomeScreen() {
                 }}
               />
             ) : (
-              <View className="flex-1 justify-center items-center px-10 pt-20">
-                <View className="w-25 h-25 rounded-full justify-center items-center mb-6 bg-card">
+              <View style={styles.emptyState}>
+                <View style={[styles.emptyStateIcon, { backgroundColor: tokens.colors.surface }]}>
                   <IconSymbol
                     name="music.note.list"
                     size={48}
-                    color="hsl(0 0% 63%)"
+                    color={tokens.colors.subtleText}
                   />
                 </View>
-                <Text className="text-foreground text-2xl font-bold text-center mb-2">
+                <Text style={[styles.emptyStateTitle, { color: tokens.colors.text }]}>
                   Your Music Lives Here
                 </Text>
-                <Text className="text-muted-foreground text-base text-center mb-8 leading-6">
+                <Text style={[styles.emptyStateSubtitle, { color: tokens.colors.subtleText }]}>
                   Add your favorite songs and albums to get started
                 </Text>
                 <Button
@@ -528,14 +534,14 @@ export default function HomeScreen() {
           ) : sidebarView === "playlists" ? (
             <PlaylistsScreen onPlaylistPress={handlePlaylistPress} />
           ) : sidebarView === "genres" ? (
-            <View className="flex-1 justify-center items-center px-10">
-              <Text className="text-foreground text-lg font-medium text-center">
+            <View style={styles.placeholderView}>
+              <Text style={[styles.placeholderText, { color: tokens.colors.text }]}>
                 Genres view coming soon...
               </Text>
             </View>
           ) : (
-            <View className="flex-1 justify-center items-center px-10">
-              <Text className="text-foreground text-lg font-medium text-center">
+            <View style={styles.placeholderView}>
+              <Text style={[styles.placeholderText, { color: tokens.colors.text }]}>
                 {sidebarView} view coming soon...
               </Text>
             </View>
@@ -627,12 +633,15 @@ export default function HomeScreen() {
         onRequestClose={() => setShowGearMenu(false)}
       >
         <Pressable
-          className="flex-1 bg-black/10"
+          style={[styles.modalBackdrop, { backgroundColor: 'rgba(0,0,0,0.1)' }]}
           onPress={() => setShowGearMenu(false)}
         >
-          <View className="absolute top-20 right-5 w-50 rounded-lg shadow-lg shadow-black/25 border border-border bg-card">
+          <View style={[styles.modalMenu, { 
+            backgroundColor: tokens.colors.surface,
+            borderColor: tokens.colors.border 
+          }]}>
             <Pressable
-              className="py-3 px-4 border-b border-border"
+              style={[styles.menuItem, { borderBottomColor: tokens.colors.border }]}
               onPress={() => {
                 setShowGearMenu(false);
                 handleClearLibrary();
@@ -643,7 +652,7 @@ export default function HomeScreen() {
                   <IconSymbol
                     name="trash"
                     size={16}
-                    color="hsl(0 84% 60%)"
+                    color={tokens.colors.danger}
                   />
                 </View>
                 <Text className="text-destructive text-sm font-medium">
@@ -652,7 +661,7 @@ export default function HomeScreen() {
               </View>
             </Pressable>
             <Pressable
-              className="py-3 px-4"
+              style={styles.menuItem}
               onPress={() => {
                 setShowGearMenu(false);
                 handleClearAllPlaylists();
@@ -663,7 +672,7 @@ export default function HomeScreen() {
                   <IconSymbol
                     name="trash"
                     size={16}
-                    color="hsl(0 84% 60%)"
+                    color={tokens.colors.danger}
                   />
                 </View>
                 <Text className="text-destructive text-sm font-medium">
@@ -683,12 +692,15 @@ export default function HomeScreen() {
         onRequestClose={() => setShowAddMusicMenu(false)}
       >
         <Pressable
-          className="flex-1 bg-black/10"
+          style={[styles.modalBackdrop, { backgroundColor: 'rgba(0,0,0,0.1)' }]}
           onPress={() => setShowAddMusicMenu(false)}
         >
-          <View className="absolute top-20 right-5 w-50 rounded-lg shadow-lg shadow-black/25 border border-border bg-card">
+          <View style={[styles.modalMenu, { 
+            backgroundColor: tokens.colors.surface,
+            borderColor: tokens.colors.border 
+          }]}>
             <Pressable
-              className="py-3 px-4 border-b border-border"
+              style={[styles.menuItem, { borderBottomColor: tokens.colors.border }]}
               onPress={() => {
                 setShowAddMusicMenu(false);
                 handlePickFolder();
@@ -699,7 +711,7 @@ export default function HomeScreen() {
                   <IconSymbol
                     name="folder"
                     size={16}
-                    color="hsl(0 0% 98%)"
+                    color={tokens.colors.text}
                   />
                 </View>
                 <Text className="text-foreground text-sm font-medium">
@@ -708,19 +720,19 @@ export default function HomeScreen() {
               </View>
             </Pressable>
             {Platform.OS === 'web' && (
-              <Pressable
-                className="py-3 px-4"
-                onPress={() => {
-                  setShowAddMusicMenu(false);
-                  handlePickFiles();
-                }}
-              >
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => {
+                setShowAddMusicMenu(false);
+                handlePickFiles();
+              }}
+            >
                 <View className="flex-row items-center">
                   <View className="w-5 items-center mr-3">
                     <IconSymbol
                       name="music.note"
                       size={16}
-                      color="hsl(0 0% 98%)"
+                      color={tokens.colors.text}
                     />
                   </View>
                   <Text className="text-foreground text-sm font-medium">
@@ -736,7 +748,108 @@ export default function HomeScreen() {
   );
 }
 
-// Styles removed - now using NativeWind classes
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  headerCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerRight: {
+    position: 'absolute',
+    top: 12,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  mainContent: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  divider: {
+    width: 20,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  contentArea: {
+    flex: 1,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingTop: 80,
+  },
+  emptyStateIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  emptyStateTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptyStateSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  placeholderView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  placeholderText: {
+    fontSize: 18,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  modalBackdrop: {
+    flex: 1,
+  },
+  modalMenu: {
+    position: 'absolute',
+    top: 80,
+    right: 20,
+    width: 200,
+    borderRadius: 8,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  menuItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+  },
+});
 
 function formatTrackDuration(duration?: number | null) {
   if (!duration) return "";

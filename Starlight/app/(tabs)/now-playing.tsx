@@ -119,7 +119,6 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#E0E7FF",
   },
   timeline: {
     flexDirection: "row",

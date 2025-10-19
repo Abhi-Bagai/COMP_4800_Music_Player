@@ -124,7 +124,7 @@ export function PlaylistsScreen({ onPlaylistPress }: PlaylistsScreenProps) {
           <IconSymbol
             name="plus"
             size={16}
-            color="hsl(0 0% 98%)"
+            color={tokens.colors.onPrimary}
           />
           <Text className="text-primary-foreground text-xs font-semibold">
             New Playlist
