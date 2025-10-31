@@ -8,13 +8,14 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import { PanGestureHandler } from "react-native-gesture-handler";
+import { PanGestureHandler, LongPressGestureHandler, State } from "react-native-gesture-handler";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { IconButton } from "@/src/components/ui/icon-button";
 import { Text } from "@/src/components/ui/text";
 import { useTheme } from "@/src/theme/provider";
 import { usePlayerStore } from "@/src/state";
+import { useDrag } from "@/src/contexts/drag-context";
 
 interface Track {
   id: string;
@@ -354,8 +355,11 @@ function TableRow({
 }: TableRowProps) {
   const { tokens } = useTheme();
   const { activeTrack, isPlaying } = usePlayerStore();
+  const { setDraggedTrack, setDragPosition } = useDrag();
   const [isHovered, setIsHovered] = React.useState(false);
   const [isPressed, setIsPressed] = React.useState(false);
+  const [isDragging, setIsDragging] = React.useState(false);
+  const rowRef = React.useRef<View>(null);
 
   // Check if this track is currently playing
   const isCurrentlyPlaying = activeTrack?.id === track.id && isPlaying;
@@ -399,27 +403,52 @@ function TableRow({
     }
   };
 
-  return (
+  const handleDragStart = (event: any) => {
+    const { pageX, pageY } = event.nativeEvent;
+    setIsDragging(true);
+    setDraggedTrack({
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+    });
+    setDragPosition({ x: pageX, y: pageY });
+  };
+
+  const handleDragUpdate = (event: any) => {
+    const { pageX, pageY } = event.nativeEvent;
+    setDragPosition({ x: pageX, y: pageY });
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    setDraggedTrack(null);
+    setDragPosition(null);
+  };
+
+  const rowContent = (
     <Pressable
       style={[
         styles.row,
         {
           backgroundColor: isCurrentlyPlaying
             ? tokens.colors.primary + '20' // Semi-transparent primary color for currently playing
+            : isDragging
+            ? tokens.colors.primary + '30'
             : isPressed 
             ? tokens.colors.surfaceElevated 
             : isHovered 
             ? tokens.colors.surfaceElevated 
             : tokens.colors.surface,
           borderBottomColor: tokens.colors.background,
+          opacity: isDragging ? 0.5 : 1,
         },
       ]}
-      onPress={handlePress}
-      onLongPress={handleLongPress}
+      onPress={isDragging ? undefined : handlePress}
+      onLongPress={isDragging ? undefined : handleLongPress}
       delayLongPress={500}
-      onPressIn={() => setIsPressed(true)}
+      onPressIn={() => !isDragging && setIsPressed(true)}
       onPressOut={() => setIsPressed(false)}
-      onHoverIn={Platform.OS === "web" ? () => setIsHovered(true) : undefined}
+      onHoverIn={Platform.OS === "web" && !isDragging ? () => setIsHovered(true) : undefined}
       onHoverOut={Platform.OS === "web" ? () => setIsHovered(false) : undefined}
       // Handle right-click context menu on web
       {...(Platform.OS === "web" && {
@@ -606,6 +635,93 @@ function TableRow({
         );
       })}
     </Pressable>
+  );
+
+  // Set up web drag handlers
+  React.useEffect(() => {
+    if (Platform.OS !== "web" || typeof document === 'undefined') return;
+
+    const rowElement = rowRef.current;
+    if (!rowElement) return;
+
+    // For web, attach mouse event listeners directly to the DOM element
+    const handleMouseDown = (e: MouseEvent) => {
+      // Only handle left mouse button
+      if (e.button !== 0) return;
+      
+      const startX = e.pageX;
+      const startY = e.pageY;
+      let isDraggingNow = false;
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const deltaX = Math.abs(moveEvent.pageX - startX);
+        const deltaY = Math.abs(moveEvent.pageY - startY);
+        
+        // Start dragging after 5px movement
+        if ((deltaX > 5 || deltaY > 5) && !isDraggingNow) {
+          isDraggingNow = true;
+          handleDragStart({ nativeEvent: { pageX: moveEvent.pageX, pageY: moveEvent.pageY } });
+        }
+        
+        if (isDraggingNow) {
+          handleDragUpdate({ nativeEvent: { pageX: moveEvent.pageX, pageY: moveEvent.pageY } });
+        }
+      };
+
+      const handleMouseUp = () => {
+        if (isDraggingNow) {
+          handleDragEnd();
+        }
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    };
+
+    // Use type assertion to access DOM element on web
+    const domNode = rowElement as any;
+    if (domNode && domNode.addEventListener) {
+      domNode.addEventListener('mousedown', handleMouseDown);
+      return () => {
+        domNode.removeEventListener('mousedown', handleMouseDown);
+      };
+    }
+  }, [track.id]);
+
+  // Wrap with gesture handlers for drag functionality
+  if (Platform.OS === "web") {
+    // For web, use ref-based approach
+    return (
+      <View ref={rowRef}>
+        {rowContent}
+      </View>
+    );
+  }
+
+  // For mobile, use LongPressGestureHandler + PanGestureHandler
+  return (
+    <LongPressGestureHandler
+      minDurationMs={300}
+      onHandlerStateChange={(event) => {
+        if (event.nativeEvent.state === State.ACTIVE) {
+          handleDragStart(event);
+        }
+      }}
+    >
+      <PanGestureHandler
+        onGestureEvent={handleDragUpdate}
+        onHandlerStateChange={(event) => {
+          if (event.nativeEvent.state === State.END || event.nativeEvent.state === State.CANCELLED) {
+            handleDragEnd();
+          }
+        }}
+        enabled={isDragging}
+      >
+        {rowContent}
+      </PanGestureHandler>
+    </LongPressGestureHandler>
   );
 }
 

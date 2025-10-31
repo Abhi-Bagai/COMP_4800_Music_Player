@@ -26,6 +26,7 @@ import { PlaylistDetailScreen } from "@/src/components/playlist-detail-screen";
 import { SidebarNavigation } from "@/src/components/sidebar-navigation";
 import { TableView } from "@/src/components/table-view";
 import { TagManager } from "@/src/components/tag-manager";
+import { DragOverlay } from "@/src/components/drag-overlay";
 import { Button } from "@/src/components/ui/button";
 import { DropdownMenu } from "@/src/components/ui/dropdown-menu";
 import { IconButton } from "@/src/components/ui/icon-button";
@@ -558,6 +559,9 @@ export default function HomeScreen() {
           )}
         </View>
       </View>
+
+      {/* Drag Overlay */}
+      <DragOverlay />
 
       {/* Mini Player */}
       {activeTrack && (

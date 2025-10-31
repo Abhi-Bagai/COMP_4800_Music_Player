@@ -1,14 +1,17 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { MiniPlayer } from '@/src/components/mini-player';
 import { NowPlaying } from '@/src/components/now-playing';
+import { DragOverlay } from '@/src/components/drag-overlay';
 import { PlaylistCreationModal } from '@/src/components/playlist-creation-modal';
 import { Button } from '@/src/components/ui/button';
 import { IconButton } from '@/src/components/ui/icon-button';
 import { Text } from '@/src/components/ui/text';
 import { playTrack } from '@/src/services/playback-service';
-import { deletePlaylistById, hydratePlaylistsFromDatabase, getPlaylistDetails } from '@/src/services/playlist-service';
+import { deletePlaylistById, hydratePlaylistsFromDatabase, getPlaylistDetails, addTrackToPlaylistById, isTrackInPlaylist } from '@/src/services/playlist-service';
 import { usePlayerStore, usePlaylistStore } from '@/src/state';
 import { useTheme } from '@/src/theme/provider';
+import { useDrag } from '@/src/contexts/drag-context';
+import { addTrackToPlaylist } from '@/src/db/playlist-repository';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
@@ -28,12 +31,97 @@ export function PlaylistsScreen({ onPlaylistPress }: PlaylistsScreenProps) {
   const { tokens } = useTheme();
   const { activeTrack } = usePlayerStore();
   const { playlists, isLoading } = usePlaylistStore();
+  const { draggedTrack, hoveredPlaylistId, setHoveredPlaylistId, setDraggedTrack, setDragPosition } = useDrag();
   const [showNowPlaying, setShowNowPlaying] = useState(false);
   const [showPlaylistCreation, setShowPlaylistCreation] = useState(false);
+  const [playlistRefs, setPlaylistRefs] = useState<Record<string, any>>({});
 
   useEffect(() => {
     hydratePlaylistsFromDatabase();
   }, []);
+
+  // Monitor drag position to detect when over a playlist (web only)
+  useEffect(() => {
+    if (!draggedTrack || Platform.OS !== 'web' || typeof document === 'undefined') {
+      return;
+    }
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const x = e.pageX || e.clientX;
+      const y = e.pageY || e.clientY;
+
+      // Check each playlist item's position using elementFromPoint
+      const element = document.elementFromPoint(x, y);
+      if (element) {
+        // Find the closest playlist item by checking parent elements
+        let currentElement: HTMLElement | null = element as HTMLElement;
+        let playlistId: string | null = null;
+
+        while (currentElement && !playlistId) {
+          const dataPlaylistId = currentElement.getAttribute('data-playlist-id');
+          if (dataPlaylistId) {
+            playlistId = dataPlaylistId;
+            break;
+          }
+          currentElement = currentElement.parentElement;
+        }
+
+        if (playlistId && hoveredPlaylistId !== playlistId) {
+          setHoveredPlaylistId(playlistId);
+        } else if (!playlistId && hoveredPlaylistId) {
+          setHoveredPlaylistId(null);
+        }
+      }
+    };
+
+    const handleMouseUp = async () => {
+      // Handle drop when mouse is released over a playlist
+      if (hoveredPlaylistId && draggedTrack) {
+        await handleDrop(hoveredPlaylistId);
+      }
+      setHoveredPlaylistId(null);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [draggedTrack, hoveredPlaylistId]);
+
+  const handleDrop = async (playlistId: string) => {
+    if (!draggedTrack) return;
+
+    try {
+      const alreadyInPlaylist = await isTrackInPlaylist(playlistId, draggedTrack.id);
+      if (alreadyInPlaylist) {
+        if (Platform.OS === 'web') {
+          alert('This track is already in the playlist');
+        }
+        return;
+      }
+
+      await addTrackToPlaylistById(playlistId, draggedTrack.id);
+      
+      setDraggedTrack(null);
+      setDragPosition(null);
+      setHoveredPlaylistId(null);
+
+      if (Platform.OS === 'web') {
+        alert(`Added "${draggedTrack.title}" to playlist`);
+      }
+    } catch (error) {
+      console.error('Error adding track to playlist:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add track to playlist';
+      if (Platform.OS === 'web') {
+        alert(errorMessage);
+      }
+    }
+  };
 
   const handleDeletePlaylist = (playlistId: string, playlistName: string) => {
     const confirmMessage = `Delete playlist "${playlistName}"? This cannot be undone.`;
@@ -141,30 +229,52 @@ export function PlaylistsScreen({ onPlaylistPress }: PlaylistsScreenProps) {
             styles.contentContainer,
             activeTrack && styles.contentContainerWithMini,
           ]}
-          renderItem={({ item }) => (
-            <Swipeable
-              overshootRight={false}
-              renderRightActions={() => (
-                <Pressable
-                  onPress={() => handleDeletePlaylist(item.id, item.name)}
-                  style={[styles.swipeDelete, { backgroundColor: tokens.colors.danger }]}
-                  accessibilityLabel="Delete playlist"
-                >
-                  <IconSymbol name="trash" size={20} color={tokens.colors.surface} />
-                </Pressable>
-              )}
-            >
-              <Pressable
-                style={({ pressed }) => [
-                  styles.playlistItem,
-                  {
-                    backgroundColor: pressed
-                      ? tokens.colors.surfaceElevated
-                      : tokens.colors.surface,
-                  },
-                ]}
-                onPress={() => onPlaylistPress(item.id)}
+          renderItem={({ item }) => {
+            const playlistRef = React.useRef<View>(null);
+            const isHovered = hoveredPlaylistId === item.id;
+            const canDrop = draggedTrack && !isTrackInPlaylist?.(item.id, draggedTrack.id);
+
+            // Store ref for drag position checking
+            React.useEffect(() => {
+              setPlaylistRefs((prev) => ({ ...prev, [item.id]: playlistRef }));
+            }, [item.id]);
+
+            return (
+              <Swipeable
+                overshootRight={false}
+                renderRightActions={() => (
+                  <Pressable
+                    onPress={() => handleDeletePlaylist(item.id, item.name)}
+                    style={[styles.swipeDelete, { backgroundColor: tokens.colors.danger }]}
+                    accessibilityLabel="Delete playlist"
+                  >
+                    <IconSymbol name="trash" size={20} color={tokens.colors.surface} />
+                  </Pressable>
+                )}
               >
+                <View ref={playlistRef}>
+                  <Pressable
+                    data-playlist-id={Platform.OS === 'web' ? item.id : undefined}
+                    style={({ pressed }) => [
+                      styles.playlistItem,
+                      {
+                        backgroundColor: isHovered && draggedTrack
+                          ? tokens.colors.primary + '20'
+                          : pressed
+                          ? tokens.colors.surfaceElevated
+                          : tokens.colors.surface,
+                        borderWidth: isHovered && draggedTrack ? 2 : 0,
+                        borderColor: isHovered && draggedTrack ? tokens.colors.primary : 'transparent',
+                      },
+                    ]}
+                    onPress={async () => {
+                      if (draggedTrack) {
+                        await handleDrop(item.id);
+                      } else {
+                        onPlaylistPress(item.id);
+                      }
+                    }}
+                  >
                 <View style={styles.playlistContent}>
                   {/* Playlist Artwork Placeholder */}
                   <View style={[styles.playlistArt, { backgroundColor: tokens.colors.surfaceElevated }]}>
@@ -204,9 +314,11 @@ export function PlaylistsScreen({ onPlaylistPress }: PlaylistsScreenProps) {
                     accessibilityLabel="Delete playlist"
                   />
                 </View>
-              </Pressable>
-            </Swipeable>
-          )}
+                  </Pressable>
+                </View>
+              </Swipeable>
+            );
+          }}
           keyExtractor={(item) => item.id}
         />
       ) : (
@@ -228,6 +340,9 @@ export function PlaylistsScreen({ onPlaylistPress }: PlaylistsScreenProps) {
           </Button>
         </View>
       )}
+
+      {/* Drag Overlay */}
+      <DragOverlay />
 
       {/* Mini Player */}
       {activeTrack && (

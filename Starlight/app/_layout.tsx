@@ -9,6 +9,7 @@ import { useColorScheme } from 'nativewind';
 import { View } from 'react-native';
 import { AudioPlaybackProvider } from '@/src/components/audio-playback-provider';
 import { ThemeProvider as CustomThemeProvider } from '@/src/theme/provider';
+import { DragProvider } from '@/src/contexts/drag-context';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -19,15 +20,17 @@ export default function RootLayout() {
   return (
     <View className="flex-1">
       <CustomThemeProvider initialMode="dark">
-        <ThemeProvider value={NAV_THEME["dark"]}>
-          <StatusBar style="light" />
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-          </Stack>
-          <PortalHost />
-          <AudioPlaybackProvider />
-        </ThemeProvider>
+        <DragProvider>
+          <ThemeProvider value={NAV_THEME["dark"]}>
+            <StatusBar style="light" />
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+            </Stack>
+            <PortalHost />
+            <AudioPlaybackProvider />
+          </ThemeProvider>
+        </DragProvider>
       </CustomThemeProvider>
     </View>
   );
