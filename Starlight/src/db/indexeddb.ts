@@ -515,10 +515,33 @@ export async function idbDeletePlaylist(playlistId: string) {
   });
 }
 
+export async function idbClearPlaylists() {
+  await withStores(['playlists', 'playlist_tracks'], 'readwrite', async ({ playlists, playlist_tracks }) => {
+    await Promise.all([
+      requestToPromise(playlists.clear()),
+      requestToPromise(playlist_tracks.clear()),
+    ]);
+  });
+}
+
 export async function idbGetAllPlaylists() {
-  return await withStores(['playlists'], 'readonly', async ({ playlists }) => {
-    const rows = await getAllFromStore<PlaylistRecord>(playlists);
-    return rows.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
+  return await withStores(['playlists', 'playlist_tracks'], 'readonly', async ({ playlists, playlist_tracks }) => {
+    const playlistRows = await getAllFromStore<PlaylistRecord>(playlists);
+    
+    // Get track counts for each playlist
+    const playlistsWithTrackCounts = await Promise.all(
+      playlistRows.map(async (playlist) => {
+        const trackEntries = await requestToPromise<PlaylistTrackRecord[]>(
+          playlist_tracks.index('playlist_id').getAll(IDBKeyRange.only(playlist.id))
+        );
+        return {
+          ...playlist,
+          playlistTracks: trackEntries,
+        };
+      })
+    );
+    
+    return playlistsWithTrackCounts.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
   });
 }
 
@@ -566,6 +589,16 @@ export async function idbRemoveTrackFromPlaylist(playlistId: string, trackId: st
     if (target) {
       await requestToPromise(playlist_tracks.delete(target.id));
     }
+  });
+}
+
+export async function idbIsTrackInPlaylist(playlistId: string, trackId: string): Promise<boolean> {
+  return await withStores(['playlist_tracks'], 'readonly', async ({ playlist_tracks }) => {
+    const index = playlist_tracks.index('playlist_id');
+    const existing = await requestToPromise<PlaylistTrackRecord[]>(
+      index.getAll(IDBKeyRange.only(playlistId))
+    );
+    return existing.some(entry => entry.track_id === trackId);
   });
 }
 

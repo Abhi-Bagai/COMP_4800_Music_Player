@@ -1,7 +1,6 @@
+import { Card } from '@/components/ui/card';
 import { PropsWithChildren } from 'react';
-import { StyleSheet, View, ViewProps } from 'react-native';
-
-import { useTheme } from '@/src/theme/provider';
+import { ViewProps } from 'react-native';
 
 export type SurfaceProps = PropsWithChildren<
   ViewProps & {
@@ -17,36 +16,29 @@ export function Surface({
   padding = 'none',
   ...rest
 }: SurfaceProps) {
-  const { tokens } = useTheme();
-
-  const background = {
-    plain: tokens.colors.surface,
-    elevated: tokens.colors.surfaceElevated,
-    tinted: tokens.colors.primaryMuted,
+  // Map variant to className
+  const variantClass = {
+    plain: 'bg-card',
+    elevated: 'bg-card shadow-sm',
+    tinted: 'bg-muted/50',
   }[variant];
 
-  const content = (
-    <View
+  // Map padding to className
+  const paddingClass = {
+    none: '',
+    xs: 'p-2',
+    sm: 'p-3',
+    md: 'p-4',
+    lg: 'p-6',
+  }[padding];
+
+  return (
+    <Card
+      className={`${variantClass} ${paddingClass}`}
+      style={style}
       {...rest}
-      style={[
-        styles.base,
-        {
-          backgroundColor: background,
-          padding: tokens.spacing[padding],
-          borderRadius: tokens.radius.md,
-        },
-        style,
-      ]}
     >
       {children}
-    </View>
+    </Card>
   );
-
-  return content;
 }
-
-const styles = StyleSheet.create({
-  base: {
-    overflow: 'hidden',
-  },
-});

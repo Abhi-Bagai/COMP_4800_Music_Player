@@ -1,9 +1,21 @@
 import React from "react";
-import { FlatList, Pressable, StyleSheet, View } from "react-native";
+import {
+  FlatList,
+  Pressable,
+  StyleSheet,
+  View,
+  Modal,
+  Platform,
+  ScrollView,
+} from "react-native";
+import { PanGestureHandler, LongPressGestureHandler, State } from "react-native-gesture-handler";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { IconButton } from "@/src/components/ui/icon-button";
 import { Text } from "@/src/components/ui/text";
 import { useTheme } from "@/src/theme/provider";
+import { usePlayerStore } from "@/src/state";
+import { useDrag } from "@/src/contexts/drag-context";
 
 interface Track {
   id: string;
@@ -21,18 +33,715 @@ interface TableViewProps {
   onTrackPress: (track: Track) => void;
   onTrackDelete?: (track: Track) => void;
   onTrackAddToPlaylist?: (track: Track) => void;
+  onTrackShowPlaylists?: (track: Track) => void;
+  onTrackTag?: (track: Track) => void;
+  onBulkDelete?: (tracks: Track[]) => void;
+  onBulkAddToPlaylist?: (tracks: Track[]) => void;
+}
+
+interface ColumnConfig {
+  key: string;
+  label: string;
+  width: number;
 }
 
 interface TableHeaderProps {
   onSort?: (column: string) => void;
   sortColumn?: string;
   sortDirection?: "asc" | "desc";
+  columns: ColumnConfig[];
+  onColumnResize: (columnKey: string, newWidth: number) => void;
+  selectedTracks: Set<string>;
+  allTracks: Track[];
+  onSelectAll: () => void;
 }
 
-function TableHeader({ onSort, sortColumn, sortDirection }: TableHeaderProps) {
+function TableHeader({
+  onSort,
+  sortColumn,
+  sortDirection,
+  columns,
+  onColumnResize,
+  selectedTracks,
+  allTracks,
+  onSelectAll,
+}: TableHeaderProps) {
   const { tokens } = useTheme();
 
-  const columns = [
+  return (
+    <View
+      style={[
+        styles.header,
+        {
+          backgroundColor: tokens.colors.surface,
+          borderBottomColor: tokens.colors.background,
+        },
+      ]}
+    >
+      {columns.map((column, index) => {
+        const isAllSelected =
+          selectedTracks.size === allTracks.length && allTracks.length > 0;
+        const isIndeterminate =
+          selectedTracks.size > 0 && selectedTracks.size < allTracks.length;
+
+        return (
+          <View key={column.key} style={styles.headerCellContainer}>
+            {column.key === "select" ? (
+              <Pressable
+                style={[styles.headerCell, { width: column.width }]}
+                onPress={onSelectAll}
+              >
+                <View
+                  style={[
+                    styles.checkboxBox,
+                    {
+                      backgroundColor: isAllSelected
+                        ? tokens.colors.primary
+                        : "transparent",
+                      borderColor: tokens.colors.border,
+                    },
+                  ]}
+                >
+                  {isAllSelected && (
+                    <IconSymbol
+                      name="checkmark"
+                      size={12}
+                      color={tokens.colors.onPrimary}
+                    />
+                  )}
+                  {isIndeterminate && (
+                    <View
+                      style={[
+                        styles.checkboxIndeterminate,
+                        { backgroundColor: tokens.colors.primary },
+                      ]}
+                    />
+                  )}
+                </View>
+              </Pressable>
+            ) : (
+              <Pressable
+                style={[styles.headerCell, { width: column.width }]}
+                onPress={() => onSort?.(column.key)}
+              >
+                <Text
+                  style={[styles.headerText, { color: tokens.colors.text }]}
+                >
+                  {column.label}
+                </Text>
+                {sortColumn === column.key && (
+                  <IconSymbol
+                    name={
+                      sortDirection === "asc" ? "chevron.up" : "chevron.down"
+                    }
+                    size={12}
+                    color={tokens.colors.primary}
+                  />
+                )}
+              </Pressable>
+            )}
+            {index < columns.length - 1 && (
+              <>
+                <View
+                  style={[
+                    styles.columnDivider,
+                    { backgroundColor: tokens.colors.background },
+                  ]}
+                />
+                <PanGestureHandler
+                  onGestureEvent={(event) => {
+                    const newWidth = Math.max(
+                      40,
+                      column.width + event.nativeEvent.translationX
+                    );
+                    onColumnResize(column.key, newWidth);
+                  }}
+                >
+                  <View
+                    style={[
+                      styles.resizeHandle,
+                      { backgroundColor: 'transparent' },
+                    ]}
+                  />
+                </PanGestureHandler>
+              </>
+            )}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+interface ContextMenuProps {
+  visible: boolean;
+  position: { x: number; y: number };
+  track: Track | null;
+  selectedTracks: Track[];
+  onClose: () => void;
+  onPlay: (track: Track) => void;
+  onAddToPlaylist: (track: Track) => void;
+  onDelete: (track: Track) => void;
+  onShowPlaylists: (track: Track) => void;
+  onTagTrack: (track: Track) => void;
+  onBulkDelete: (tracks: Track[]) => void;
+  onBulkAddToPlaylist: (tracks: Track[]) => void;
+}
+
+interface TableRowProps {
+  track: Track;
+  index: number;
+  onPress: (track: Track) => void;
+  onDelete?: (track: Track) => void;
+  onAddToPlaylist?: (track: Track) => void;
+  onShowPlaylists?: (track: Track) => void;
+  columns: ColumnConfig[];
+  onContextMenu: (track: Track, position: { x: number; y: number }) => void;
+  isSelected: boolean;
+  onToggleSelect: (track: Track) => void;
+}
+
+function ContextMenu({
+  visible,
+  position,
+  track,
+  selectedTracks,
+  onClose,
+  onPlay,
+  onAddToPlaylist,
+  onDelete,
+  onShowPlaylists,
+  onTagTrack,
+  onBulkDelete,
+  onBulkAddToPlaylist,
+}: ContextMenuProps) {
+  const { tokens } = useTheme();
+
+  if (!visible) return null;
+
+  const hasMultipleSelected = selectedTracks.length > 1;
+  const currentTrack = track || selectedTracks[0];
+
+  const menuItems = [
+    {
+      label: "Play",
+      icon: "play.fill",
+      onPress: () => {
+        onPlay(currentTrack);
+        onClose();
+      },
+      disabled: hasMultipleSelected,
+    },
+    {
+      label: hasMultipleSelected
+        ? `Add ${selectedTracks.length} tracks to Playlists`
+        : "Add to Playlists",
+      icon: "plus.circle",
+      onPress: () => {
+        if (hasMultipleSelected) {
+          onBulkAddToPlaylist(selectedTracks);
+        } else {
+          onAddToPlaylist(currentTrack);
+        }
+        onClose();
+      },
+    },
+    {
+      label: "Tag Track",
+      icon: "tag",
+      onPress: () => {
+        onTagTrack(currentTrack);
+        onClose();
+      },
+      disabled: hasMultipleSelected,
+    },
+    {
+      label: "Show Playlists",
+      icon: "list.bullet",
+      onPress: () => {
+        onShowPlaylists(currentTrack);
+        onClose();
+      },
+      disabled: hasMultipleSelected,
+    },
+    {
+      label: hasMultipleSelected
+        ? `Delete ${selectedTracks.length} tracks`
+        : "Delete",
+      icon: "trash",
+      onPress: () => {
+        if (hasMultipleSelected) {
+          onBulkDelete(selectedTracks);
+        } else {
+          onDelete(currentTrack);
+        }
+        onClose();
+      },
+      destructive: true,
+    },
+  ].filter((item) => !item.disabled);
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <Pressable style={styles.contextMenuBackdrop} onPress={onClose}>
+        <View
+          style={[
+            styles.contextMenu,
+            {
+              backgroundColor: tokens.colors.surface,
+              borderColor: tokens.colors.border,
+              left: position.x,
+              top: position.y,
+            },
+          ]}
+        >
+          {menuItems.map((item, index) => (
+            <Pressable
+              key={index}
+              style={[
+                styles.contextMenuItem,
+                index < menuItems.length - 1 && {
+                  borderBottomColor: tokens.colors.background,
+                  borderBottomWidth: 1,
+                },
+              ]}
+              onPress={item.onPress}
+            >
+              <View style={styles.contextMenuItemContent}>
+                <IconSymbol
+                  name={item.icon as any}
+                  size={16}
+                  color={
+                    item.destructive ? tokens.colors.danger : tokens.colors.text
+                  }
+                />
+                <Text
+                  style={[
+                    styles.contextMenuItemText,
+                    {
+                      color: item.destructive
+                        ? tokens.colors.danger
+                        : tokens.colors.text,
+                    },
+                  ]}
+                >
+                  {item.label}
+                </Text>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      </Pressable>
+    </Modal>
+  );
+}
+
+function TableRow({
+  track,
+  index,
+  onPress,
+  onDelete,
+  onAddToPlaylist,
+  onShowPlaylists,
+  columns,
+  onContextMenu,
+  isSelected,
+  onToggleSelect,
+}: TableRowProps) {
+  const { tokens } = useTheme();
+  const { activeTrack, isPlaying } = usePlayerStore();
+  const { setDraggedTrack, setDragPosition } = useDrag();
+  const [isHovered, setIsHovered] = React.useState(false);
+  const [isPressed, setIsPressed] = React.useState(false);
+  const [isDragging, setIsDragging] = React.useState(false);
+  const rowRef = React.useRef<View>(null);
+
+  // Check if this track is currently playing
+  const isCurrentlyPlaying = activeTrack?.id === track.id && isPlaying;
+
+  const getSourceIcon = () => {
+    // You can customize this based on track source
+    return (
+      <IconSymbol name="music.note" size={16} color={tokens.colors.primary} />
+    );
+  };
+
+  const formatDuration = (durationMs?: number | null) => {
+    if (!durationMs) return "0:00";
+    const totalSeconds = Math.floor(durationMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = (totalSeconds % 60).toString().padStart(2, "0");
+    return `${minutes}:${seconds}`;
+  };
+
+  const getColumnWidth = (key: string) => {
+    return columns.find((col) => col.key === key)?.width ?? 60;
+  };
+
+  const handleLongPress = (event: any) => {
+    // For mobile, we'll use onLongPress
+    const { pageX, pageY } = event.nativeEvent;
+    onContextMenu(track, { x: pageX, y: pageY });
+  };
+
+  const handlePress = (event: any) => {
+    // Regular left-click
+    onPress(track);
+  };
+
+  const handleContextMenu = (event: any) => {
+    // Handle right-click context menu on web
+    if (Platform.OS === "web") {
+      event.preventDefault();
+      const { pageX, pageY } = event.nativeEvent;
+      onContextMenu(track, { x: pageX, y: pageY });
+    }
+  };
+
+  const handleDragStart = (event: any) => {
+    const { pageX, pageY } = event.nativeEvent;
+    setIsDragging(true);
+    setDraggedTrack({
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+    });
+    setDragPosition({ x: pageX, y: pageY });
+  };
+
+  const handleDragUpdate = (event: any) => {
+    const { pageX, pageY } = event.nativeEvent;
+    setDragPosition({ x: pageX, y: pageY });
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    setDraggedTrack(null);
+    setDragPosition(null);
+  };
+
+  const rowContent = (
+    <Pressable
+      style={[
+        styles.row,
+        {
+          backgroundColor: isCurrentlyPlaying
+            ? tokens.colors.primary + '20' // Semi-transparent primary color for currently playing
+            : isDragging
+            ? tokens.colors.primary + '30'
+            : isPressed 
+            ? tokens.colors.surfaceElevated 
+            : isHovered 
+            ? tokens.colors.surfaceElevated 
+            : tokens.colors.surface,
+          borderBottomColor: tokens.colors.background,
+          opacity: isDragging ? 0.5 : 1,
+        },
+      ]}
+      onPress={isDragging ? undefined : handlePress}
+      onLongPress={isDragging ? undefined : handleLongPress}
+      delayLongPress={500}
+      onPressIn={() => !isDragging && setIsPressed(true)}
+      onPressOut={() => setIsPressed(false)}
+      onHoverIn={Platform.OS === "web" && !isDragging ? () => setIsHovered(true) : undefined}
+      onHoverOut={Platform.OS === "web" ? () => setIsHovered(false) : undefined}
+      // Handle right-click context menu on web
+      {...(Platform.OS === "web" && {
+        onContextMenu: handleContextMenu,
+      })}
+    >
+      {columns.map((column, columnIndex) => {
+        let content;
+
+        switch (column.key) {
+          case "select":
+            content = (
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onToggleSelect(track);
+                }}
+                style={styles.checkbox}
+              >
+                <View
+                  style={[
+                    styles.checkboxBox,
+                    {
+                      backgroundColor: isSelected
+                        ? tokens.colors.primary
+                        : "transparent",
+                      borderColor: tokens.colors.border,
+                    },
+                  ]}
+                >
+                  {isSelected && (
+                    <IconSymbol
+                      name="checkmark"
+                      size={12}
+                      color={tokens.colors.onPrimary}
+                    />
+                  )}
+                </View>
+              </Pressable>
+            );
+            break;
+          case "number":
+            content = (
+              <Text
+                style={[styles.cellText, { color: tokens.colors.subtleText }]}
+              >
+                {index + 1}
+              </Text>
+            );
+            break;
+          case "source":
+            content = getSourceIcon();
+            break;
+          case "title":
+            content = (
+              <Text
+                style={[styles.cellText, { color: tokens.colors.text }]}
+                numberOfLines={1}
+              >
+                {track.title}
+              </Text>
+            );
+            break;
+          case "time":
+            content = (
+              <Text 
+                style={[styles.cellText, { color: tokens.colors.text }]}
+                numberOfLines={1}
+              >
+                {formatDuration(track.durationMs)}
+              </Text>
+            );
+            break;
+          case "artist":
+            content = (
+              <Text
+                style={[styles.cellText, { color: tokens.colors.text }]}
+                numberOfLines={1}
+              >
+                {track.artist?.name ?? "Unknown Artist"}
+              </Text>
+            );
+            break;
+          case "album":
+            content = (
+              <Text
+                style={[styles.cellText, { color: tokens.colors.text }]}
+                numberOfLines={1}
+              >
+                {track.album?.title ?? "Unknown Album"}
+              </Text>
+            );
+            break;
+          case "bpm":
+            content = (
+              <Text 
+                style={[styles.cellText, { color: tokens.colors.text }]}
+                numberOfLines={1}
+              >
+                {track.bpm ?? "N/A"}
+              </Text>
+            );
+            break;
+          case "genre":
+            content = (
+              <Text
+                style={[styles.cellText, { color: tokens.colors.text }]}
+                numberOfLines={1}
+              >
+                {track.genre ?? "Unknown"}
+              </Text>
+            );
+            break;
+          case "tags":
+            content = (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                style={{ flex: 1 }}
+                contentContainerStyle={{ alignItems: 'center', gap: 4 }}
+              >
+                {track.tags?.slice(0, 3).map((tag, tagIndex) => (
+                  <View
+                    key={tagIndex}
+                    style={[
+                      styles.tag,
+                      { backgroundColor: tokens.colors.surfaceElevated },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.tagText,
+                        { color: tokens.colors.subtleText },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {tag}
+                    </Text>
+                  </View>
+                ))}
+                {track.tags && track.tags.length > 3 && (
+                  <Text
+                    style={[
+                      styles.tagText,
+                      { color: tokens.colors.subtleText },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    +{track.tags.length - 3}
+                  </Text>
+                )}
+              </ScrollView>
+            );
+            break;
+          default:
+            content = null;
+        }
+
+        return (
+          <View key={column.key} style={styles.cellContainer}>
+            <View
+              style={[
+                styles.cell,
+                { width: column.width },
+                column.key === "source"
+                  ? { alignItems: "center" }
+                  : {},
+                column.key === "tags"
+                  ? { flexDirection: "row", gap: 4 }
+                  : {},
+              ]}
+            >
+              {content}
+            </View>
+            {columnIndex < columns.length - 1 && (
+              <View
+                style={[
+                  styles.columnDivider,
+                  { backgroundColor: tokens.colors.background },
+                ]}
+              />
+            )}
+          </View>
+        );
+      })}
+    </Pressable>
+  );
+
+  // Set up web drag handlers
+  React.useEffect(() => {
+    if (Platform.OS !== "web" || typeof document === 'undefined') return;
+
+    const rowElement = rowRef.current;
+    if (!rowElement) return;
+
+    // For web, attach mouse event listeners directly to the DOM element
+    const handleMouseDown = (e: MouseEvent) => {
+      // Only handle left mouse button
+      if (e.button !== 0) return;
+      
+      const startX = e.pageX;
+      const startY = e.pageY;
+      let isDraggingNow = false;
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const deltaX = Math.abs(moveEvent.pageX - startX);
+        const deltaY = Math.abs(moveEvent.pageY - startY);
+        
+        // Start dragging after 5px movement
+        if ((deltaX > 5 || deltaY > 5) && !isDraggingNow) {
+          isDraggingNow = true;
+          handleDragStart({ nativeEvent: { pageX: moveEvent.pageX, pageY: moveEvent.pageY } });
+        }
+        
+        if (isDraggingNow) {
+          handleDragUpdate({ nativeEvent: { pageX: moveEvent.pageX, pageY: moveEvent.pageY } });
+        }
+      };
+
+      const handleMouseUp = () => {
+        if (isDraggingNow) {
+          handleDragEnd();
+        }
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    };
+
+    // Use type assertion to access DOM element on web
+    const domNode = rowElement as any;
+    if (domNode && domNode.addEventListener) {
+      domNode.addEventListener('mousedown', handleMouseDown);
+      return () => {
+        domNode.removeEventListener('mousedown', handleMouseDown);
+      };
+    }
+  }, [track.id]);
+
+  // Wrap with gesture handlers for drag functionality
+  if (Platform.OS === "web") {
+    // For web, use ref-based approach
+    return (
+      <View ref={rowRef}>
+        {rowContent}
+      </View>
+    );
+  }
+
+  // For mobile, use LongPressGestureHandler + PanGestureHandler
+  return (
+    <LongPressGestureHandler
+      minDurationMs={300}
+      onHandlerStateChange={(event) => {
+        if (event.nativeEvent.state === State.ACTIVE) {
+          handleDragStart(event);
+        }
+      }}
+    >
+      <PanGestureHandler
+        onGestureEvent={handleDragUpdate}
+        onHandlerStateChange={(event) => {
+          if (event.nativeEvent.state === State.END || event.nativeEvent.state === State.CANCELLED) {
+            handleDragEnd();
+          }
+        }}
+        enabled={isDragging}
+      >
+        {rowContent}
+      </PanGestureHandler>
+    </LongPressGestureHandler>
+  );
+}
+
+export function TableView({
+  tracks,
+  onTrackPress,
+  onTrackDelete,
+  onTrackAddToPlaylist,
+  onTrackShowPlaylists,
+  onTrackTag,
+  onBulkDelete,
+  onBulkAddToPlaylist,
+}: TableViewProps) {
+  const { tokens } = useTheme();
+  const [sortColumn, setSortColumn] = React.useState<string>("time");
+  const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">(
+    "desc"
+  );
+  const [columns, setColumns] = React.useState<ColumnConfig[]>([
+    { key: "select", label: "", width: 40 },
     { key: "number", label: "#", width: 40 },
     { key: "source", label: "Source", width: 60 },
     { key: "title", label: "Title", width: 200 },
@@ -42,188 +751,19 @@ function TableHeader({ onSort, sortColumn, sortDirection }: TableHeaderProps) {
     { key: "bpm", label: "BPM", width: 60 },
     { key: "genre", label: "Genre", width: 100 },
     { key: "tags", label: "Tags", width: 200 },
-  ];
-
-  return (
-    <View
-      style={[
-        styles.header,
-        { backgroundColor: tokens.colors.surfaceElevated },
-      ]}
-    >
-      {columns.map((column) => (
-        <Pressable
-          key={column.key}
-          style={[styles.headerCell, { width: column.width }]}
-          onPress={() => onSort?.(column.key)}
-        >
-          <Text style={[styles.headerText, { color: tokens.colors.text }]}>
-            {column.label}
-          </Text>
-          {sortColumn === column.key && (
-            <IconSymbol
-              name={sortDirection === "asc" ? "chevron.up" : "chevron.down"}
-              size={12}
-              color={tokens.colors.primary}
-            />
-          )}
-        </Pressable>
-      ))}
-    </View>
+  ]);
+  const [selectedTracks, setSelectedTracks] = React.useState<Set<string>>(
+    new Set()
   );
-}
-
-interface TableRowProps {
-  track: Track;
-  index: number;
-  onPress: (track: Track) => void;
-  onDelete?: (track: Track) => void;
-  onAddToPlaylist?: (track: Track) => void;
-}
-
-function TableRow({
-  track,
-  index,
-  onPress,
-  onDelete,
-  onAddToPlaylist,
-}: TableRowProps) {
-  const { tokens } = useTheme();
-
-  const getSourceIcon = () => {
-    // You can customize this based on track source
-    return (
-      <IconSymbol name="music.note" size={16} color={tokens.colors.primary} />
-    );
-  };
-
-  const formatDuration = (durationMs?: number) => {
-    if (!durationMs) return "0:00";
-    const totalSeconds = Math.floor(durationMs / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = (totalSeconds % 60).toString().padStart(2, "0");
-    return `${minutes}:${seconds}`;
-  };
-
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.row,
-        {
-          backgroundColor: pressed
-            ? tokens.colors.surfaceElevated
-            : "transparent",
-        },
-      ]}
-      onPress={() => onPress(track)}
-    >
-      {/* Number */}
-      <View style={[styles.cell, { width: 40 }]}>
-        <Text style={[styles.cellText, { color: tokens.colors.subtleText }]}>
-          {index + 1}
-        </Text>
-      </View>
-
-      {/* Source */}
-      <View style={[styles.cell, { width: 60, alignItems: "center" }]}>
-        {getSourceIcon()}
-      </View>
-
-      {/* Title */}
-      <View style={[styles.cell, { width: 200 }]}>
-        <Text
-          style={[styles.cellText, { color: tokens.colors.text }]}
-          numberOfLines={1}
-        >
-          {track.title}
-        </Text>
-      </View>
-
-      {/* Time */}
-      <View style={[styles.cell, { width: 60 }]}>
-        <Text style={[styles.cellText, { color: tokens.colors.text }]}>
-          {formatDuration(track.durationMs)}
-        </Text>
-      </View>
-
-      {/* Artist */}
-      <View style={[styles.cell, { width: 150 }]}>
-        <Text
-          style={[styles.cellText, { color: tokens.colors.text }]}
-          numberOfLines={1}
-        >
-          {track.artist?.name ?? "Unknown Artist"}
-        </Text>
-      </View>
-
-      {/* Album */}
-      <View style={[styles.cell, { width: 150 }]}>
-        <Text
-          style={[styles.cellText, { color: tokens.colors.text }]}
-          numberOfLines={1}
-        >
-          {track.album?.title ?? "Unknown Album"}
-        </Text>
-      </View>
-
-      {/* BPM */}
-      <View style={[styles.cell, { width: 60 }]}>
-        <Text style={[styles.cellText, { color: tokens.colors.text }]}>
-          {track.bpm ?? "N/A"}
-        </Text>
-      </View>
-
-      {/* Genre */}
-      <View style={[styles.cell, { width: 100 }]}>
-        <Text
-          style={[styles.cellText, { color: tokens.colors.text }]}
-          numberOfLines={1}
-        >
-          {track.genre ?? "Unknown"}
-        </Text>
-      </View>
-
-      {/* Tags */}
-      <View
-        style={[
-          styles.cell,
-          { width: 200, flexDirection: "row", flexWrap: "wrap", gap: 4 },
-        ]}
-      >
-        {track.tags?.slice(0, 3).map((tag, tagIndex) => (
-          <View
-            key={tagIndex}
-            style={[
-              styles.tag,
-              { backgroundColor: tokens.colors.surfaceElevated },
-            ]}
-          >
-            <Text style={[styles.tagText, { color: tokens.colors.subtleText }]}>
-              {tag}
-            </Text>
-          </View>
-        ))}
-        {track.tags && track.tags.length > 3 && (
-          <Text style={[styles.tagText, { color: tokens.colors.subtleText }]}>
-            +{track.tags.length - 3}
-          </Text>
-        )}
-      </View>
-    </Pressable>
-  );
-}
-
-export function TableView({
-  tracks,
-  onTrackPress,
-  onTrackDelete,
-  onTrackAddToPlaylist,
-}: TableViewProps) {
-  const { tokens } = useTheme();
-  const [sortColumn, setSortColumn] = React.useState<string>("time");
-  const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">(
-    "desc"
-  );
+  const [contextMenu, setContextMenu] = React.useState<{
+    visible: boolean;
+    position: { x: number; y: number };
+    track: Track | null;
+  }>({
+    visible: false,
+    position: { x: 0, y: 0 },
+    track: null,
+  });
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -232,6 +772,57 @@ export function TableView({
       setSortColumn(column);
       setSortDirection("asc");
     }
+  };
+
+  const handleColumnResize = (columnKey: string, newWidth: number) => {
+    setColumns((prevColumns) =>
+      prevColumns.map((col) =>
+        col.key === columnKey ? { ...col, width: newWidth } : col
+      )
+    );
+  };
+
+  const handleContextMenu = (
+    track: Track,
+    position: { x: number; y: number }
+  ) => {
+    setContextMenu({
+      visible: true,
+      position,
+      track,
+    });
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu({
+      visible: false,
+      position: { x: 0, y: 0 },
+      track: null,
+    });
+  };
+
+  const handleToggleSelect = (track: Track) => {
+    setSelectedTracks((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(track.id)) {
+        newSet.delete(track.id);
+      } else {
+        newSet.add(track.id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedTracks.size === tracks.length) {
+      setSelectedTracks(new Set());
+    } else {
+      setSelectedTracks(new Set(tracks.map((track) => track.id)));
+    }
+  };
+
+  const getSelectedTracksArray = () => {
+    return tracks.filter((track) => selectedTracks.has(track.id));
   };
 
   const sortedTracks = React.useMemo(() => {
@@ -276,12 +867,20 @@ export function TableView({
 
   return (
     <View
-      style={[styles.container, { backgroundColor: tokens.colors.background }]}
+      style={[
+        styles.container,
+        { backgroundColor: tokens.colors.background }
+      ]}
     >
       <TableHeader
         onSort={handleSort}
         sortColumn={sortColumn}
         sortDirection={sortDirection}
+        columns={columns}
+        onColumnResize={handleColumnResize}
+        selectedTracks={selectedTracks}
+        allTracks={tracks}
+        onSelectAll={handleSelectAll}
       />
       <FlatList
         data={sortedTracks}
@@ -293,10 +892,31 @@ export function TableView({
             onPress={onTrackPress}
             onDelete={onTrackDelete}
             onAddToPlaylist={onTrackAddToPlaylist}
+            onShowPlaylists={onTrackShowPlaylists}
+            columns={columns}
+            onContextMenu={handleContextMenu}
+            isSelected={selectedTracks.has(item.id)}
+            onToggleSelect={handleToggleSelect}
           />
         )}
         style={styles.list}
         showsVerticalScrollIndicator={false}
+      />
+
+      {/* Context Menu */}
+      <ContextMenu
+        visible={contextMenu.visible}
+        position={contextMenu.position}
+        track={contextMenu.track}
+        selectedTracks={getSelectedTracksArray()}
+        onClose={closeContextMenu}
+        onPlay={(track) => onTrackPress(track)}
+        onAddToPlaylist={(track) => onTrackAddToPlaylist?.(track)}
+        onTagTrack={(track) => onTrackTag?.(track)}
+        onDelete={(track) => onTrackDelete?.(track)}
+        onShowPlaylists={(track) => onTrackShowPlaylists?.(track)}
+        onBulkDelete={(tracks) => onBulkDelete?.(tracks)}
+        onBulkAddToPlaylist={(tracks) => onBulkAddToPlaylist?.(tracks)}
       />
     </View>
   );
@@ -305,13 +925,22 @@ export function TableView({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   header: {
     flexDirection: "row",
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+    borderBottomWidth: 2,
+  },
+  headerCellContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  cellContainer: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   headerCell: {
     paddingHorizontal: 8,
@@ -319,10 +948,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
+  columnDivider: {
+    width: 1,
+    height: "100%",
+  },
+  resizeHandle: {
+    width: 1,
+    height: "100%",
+    cursor: "pointer" as any,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   headerText: {
     fontSize: 12,
-    fontWeight: "600",
-    textTransform: "uppercase",
+    fontWeight: "400",
+    textTransform: "capitalize",
     letterSpacing: 0.5,
   },
   list: {
@@ -332,8 +972,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.05)",
+    borderBottomWidth: 2,
   },
   cell: {
     paddingHorizontal: 8,
@@ -351,5 +990,59 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 11,
     fontWeight: "500",
+  },
+  // Context Menu Styles
+  contextMenuBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "transparent",
+  },
+  contextMenu: {
+    position: "absolute",
+    minWidth: 180,
+    borderRadius: 8,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  contextMenuItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  contextMenuItemContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  contextMenuItemText: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  // Checkbox Styles
+  checkbox: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxBox: {
+    width: 18,
+    height: 18,
+    borderWidth: 1,
+    borderRadius: 3,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxIndeterminate: {
+    width: 8,
+    height: 2,
+    borderRadius: 1,
   },
 });

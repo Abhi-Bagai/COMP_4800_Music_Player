@@ -1,40 +1,37 @@
-import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider as NavigationThemeProvider,
-} from "@react-navigation/native";
-import { Stack } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import "react-native-gesture-handler";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import "react-native-reanimated";
+import '@/global.css';
 
-import { useColorScheme } from "@/hooks/use-color-scheme";
-import { AudioPlaybackProvider } from "@/src/components/audio-playback-provider";
-import { ThemeProvider } from "@/src/theme/provider";
+import { NAV_THEME } from '@/lib/theme';
+import { ThemeProvider } from '@react-navigation/native';
+import { PortalHost } from '@rn-primitives/portal';
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useColorScheme } from 'nativewind';
+import { View } from 'react-native';
+import { AudioPlaybackProvider } from '@/src/components/audio-playback-provider';
+import { ThemeProvider as CustomThemeProvider } from '@/src/theme/provider';
+import { DragProvider } from '@/src/contexts/drag-context';
 
-export const unstable_settings = {
-  anchor: "(tabs)",
-};
+export {
+  // Catch any errors thrown by the Layout component.
+  ErrorBoundary,
+} from 'expo-router';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider initialMode="dark">
-        <AudioPlaybackProvider />
-        <NavigationThemeProvider value={DarkTheme}>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="modal"
-              options={{ presentation: "modal", title: "Modal" }}
-            />
-          </Stack>
-          <StatusBar style="auto" />
-        </NavigationThemeProvider>
-      </ThemeProvider>
-    </GestureHandlerRootView>
+    <View className="flex-1">
+      <CustomThemeProvider initialMode="dark">
+        <DragProvider>
+          <ThemeProvider value={NAV_THEME["dark"]}>
+            <StatusBar style="light" />
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+            </Stack>
+            <PortalHost />
+            <AudioPlaybackProvider />
+          </ThemeProvider>
+        </DragProvider>
+      </CustomThemeProvider>
+    </View>
   );
 }

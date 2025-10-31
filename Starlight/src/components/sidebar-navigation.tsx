@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Pressable,
   ScrollView,
@@ -15,6 +15,7 @@ import { useTheme } from "@/src/theme/provider";
 interface SidebarNavigationProps {
   onViewChange: (view: string) => void;
   currentView: string;
+  onSearchChange?: (searchText: string) => void;
 }
 
 interface NavigationItem {
@@ -31,9 +32,14 @@ const navigationItems: NavigationItem[] = [
     icon: "music.note.list",
   },
   {
+    id: "now-playing",
+    label: "Now Playing",
+    icon: "play.fill",
+  },
+  {
     id: "artists",
     label: "Artists",
-    icon: "person.2.fill",
+    icon: "mic",
   },
   {
     id: "albums",
@@ -41,22 +47,31 @@ const navigationItems: NavigationItem[] = [
     icon: "opticaldisc",
   },
   {
+    id: "playlists",
+    label: "Playlists",
+    icon: "music.note.list",
+  },
+  {
     id: "genres",
     label: "Genres",
-    icon: "music.note",
+    icon: "pianokeys",
   },
 ];
 
 export function SidebarNavigation({
   onViewChange,
   currentView,
+  onSearchChange,
 }: SidebarNavigationProps) {
   const { tokens } = useTheme();
   const [expandedItems, setExpandedItems] = useState<string[]>([
     "library",
-    "tags",
   ]);
   const [searchText, setSearchText] = useState("");
+
+  useEffect(() => {
+    onSearchChange?.(searchText);
+  }, [searchText, onSearchChange]);
 
   const toggleExpanded = (itemId: string) => {
     setExpandedItems((prev) =>
@@ -74,11 +89,13 @@ export function SidebarNavigation({
     return (
       <View key={item.id}>
         <Pressable
-          style={[
+          style={({ pressed }) => [
             styles.navItem,
             {
               backgroundColor: isSelected
-                ? tokens.colors.primary
+                ? tokens.colors.surfaceElevated
+                : pressed
+                ? tokens.colors.surfaceElevated
                 : "transparent",
               paddingLeft: 16 + level * 16,
             },
@@ -95,14 +112,14 @@ export function SidebarNavigation({
             <IconSymbol
               name={item.icon as any}
               size={16}
-              color={isSelected ? tokens.colors.onPrimary : tokens.colors.text}
+              color={isSelected ? tokens.colors.primary : tokens.colors.text}
             />
             <Text
               style={[
                 styles.navItemText,
                 {
                   color: isSelected
-                    ? tokens.colors.onPrimary
+                    ? tokens.colors.primary
                     : tokens.colors.text,
                 },
               ]}
@@ -115,7 +132,7 @@ export function SidebarNavigation({
                 size={12}
                 color={
                   isSelected
-                    ? tokens.colors.onPrimary
+                    ? tokens.colors.primary
                     : tokens.colors.subtleText
                 }
               />
@@ -145,17 +162,11 @@ export function SidebarNavigation({
 
   return (
     <View
-      style={[
-        styles.container,
-        { backgroundColor: tokens.colors.surfaceElevated },
-      ]}
+      style={[styles.container, { backgroundColor: tokens.colors.surface }]}
     >
       {/* Search Bar */}
       <View
-        style={[
-          styles.searchContainer,
-          { backgroundColor: tokens.colors.surface },
-        ]}
+        style={[styles.searchContainer, { backgroundColor: tokens.colors.surfaceElevated }]}
       >
         <IconSymbol
           name="magnifyingglass"

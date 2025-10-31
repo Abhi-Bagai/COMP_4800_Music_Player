@@ -1,17 +1,133 @@
-import React from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import Slider from '@react-native-community/slider';
+import React, { useEffect, useRef } from "react";
+import { Pressable, StyleSheet, View, Animated, Dimensions } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Button } from "@/src/components/ui/button";
 import { Text } from "@/src/components/ui/text";
-import { useTrackScrubbing } from "@/src/hooks/use-track-scrubbing";
 import {
   skipNext,
   skipPrevious,
   togglePlayPause,
+  setVolume,
 } from "@/src/services/playback-service";
 import { usePlayerStore } from "@/src/state";
 import { useTheme } from "@/src/theme/provider";
+
+interface ScrollingTextProps {
+  text: string;
+  style: any;
+  maxWidth: number;
+}
+
+function ScrollingText({ text, style, maxWidth }: ScrollingTextProps) {
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const textRef = useRef(null);
+  const animationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const previousText = useRef(text);
+
+  useEffect(() => {
+    if (!text || maxWidth <= 0) return;
+
+    // Trim whitespace from text
+    const trimmedText = text.trim();
+
+    // Only restart animation when text actually changes (new track)
+    if (previousText.current !== trimmedText) {
+      // Stop any existing animation first
+      if (animationRef.current) {
+        animationRef.current.stop();
+      }
+
+      // Reset scroll position when text changes (new track starts playing)
+      scrollX.setValue(0);
+      previousText.current = trimmedText;
+    } else {
+      // If same text, don't restart animation
+      return;
+    }
+
+    // Measure actual text width and start scrolling if it's longer than container
+    const measureAndScroll = () => {
+      // Create a temporary DOM element to measure the actual rendered text width
+      const tempText = document.createElement('span');
+      tempText.style.position = 'absolute';
+      tempText.style.visibility = 'hidden';
+      tempText.style.whiteSpace = 'nowrap';
+      tempText.style.fontSize = style?.fontSize ? `${style.fontSize}px` : '16px';
+      tempText.style.fontWeight = style?.fontWeight || '400';
+      tempText.style.fontFamily = style?.fontFamily || 'system-ui';
+      tempText.textContent = trimmedText;
+      
+      document.body.appendChild(tempText);
+      const actualTextWidth = tempText.offsetWidth;
+      document.body.removeChild(tempText);
+      
+      
+      if (actualTextWidth > maxWidth) {
+        // Calculate scroll distance needed to show hidden text with small buffer
+        const scrollDistance = Math.max(actualTextWidth - maxWidth + 8, 0);
+        
+        // Calculate duration based on consistent scroll speed (30 pixels per second)
+        const scrollSpeed = 30;
+        const forwardDuration = Math.max(scrollDistance / scrollSpeed * 1000, 1500);
+        
+        const scrollAnimation = Animated.loop(
+          Animated.sequence([
+            Animated.delay(1500), // Wait 1.5 seconds before starting
+            Animated.timing(scrollX, {
+              toValue: -scrollDistance,
+              duration: forwardDuration, // Duration based on consistent speed
+              useNativeDriver: true,
+            }),
+            Animated.delay(1500), // Longer pause at the end
+            Animated.timing(scrollX, {
+              toValue: 0,
+              duration: 800, // Keep smooth return
+              useNativeDriver: true,
+            }),
+            Animated.delay(1500), // Longer pause before next cycle
+          ])
+        );
+
+        // Store animation reference and start it
+        animationRef.current = scrollAnimation;
+        scrollAnimation.start();
+      } else {
+        // Reset position if text fits
+        scrollX.setValue(0);
+      }
+    };
+
+    measureAndScroll();
+  }, [text, maxWidth, scrollX, style]);
+
+  // Separate cleanup effect that only runs on unmount
+  useEffect(() => {
+    return () => {
+      if (animationRef.current) {
+        animationRef.current.stop();
+      }
+    };
+  }, []);
+
+  return (
+    <View style={[styles.scrollingTextContainer, { width: maxWidth }]}>
+      <Animated.Text
+        ref={textRef}
+        style={[
+          style,
+          {
+            transform: [{ translateX: scrollX }],
+            whiteSpace: 'nowrap',
+          },
+        ]}
+      >
+        {text}
+      </Animated.Text>
+    </View>
+  );
+}
 
 interface MiniPlayerProps {
   onPress: () => void;
@@ -20,12 +136,7 @@ interface MiniPlayerProps {
 
 export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
   const { tokens } = useTheme();
-  const { activeTrack, isPlaying } = usePlayerStore();
-
-  const { currentDisplayPosition, isScrubbing, wheelProps, formatTime: formatScrubTime } = useTrackScrubbing({
-    sensitivity: 50,
-    debounceMs: 150,
-  });
+  const { activeTrack, isPlaying, positionMs, volume } = usePlayerStore();
 
   if (!activeTrack) return null;
 
@@ -34,10 +145,15 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
     await togglePlayPause();
   };
 
+  const handleVolumeChange = async (value: number) => {
+    const percent = Number.isFinite(value) ? Math.min(Math.max(value, 0), 100) : 0;
+    await setVolume(percent / 100);
+  };
+
   const progressPercentage = (() => {
     const duration = activeTrack.durationMs ?? 0;
     if (!Number.isFinite(duration) || duration <= 0) return 0;
-    const pct = (currentDisplayPosition / duration) * 100;
+    const pct = (positionMs / duration) * 100;
     if (!Number.isFinite(pct)) return 0;
     return Math.min(Math.max(pct, 0), 100);
   })();
@@ -52,27 +168,33 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
     return `${minutes}:${seconds}`;
   };
 
-  const remaining = Math.max((activeTrack.durationMs ?? 0) - currentDisplayPosition, 0);
+  const remaining = Math.max((activeTrack.durationMs ?? 0) - positionMs, 0);
 
   return (
     <View
       style={[
         styles.container,
-        { backgroundColor: tokens.colors.surfaceElevated },
+        { 
+          backgroundColor: tokens.colors.surface,
+          borderTopColor: tokens.colors.background,
+        },
       ]}
     >
       <View style={styles.content}>
         {/* Left Side - Track Info */}
         <View style={styles.leftSection}>
-          <Text style={[styles.trackTitle, { color: tokens.colors.text }]}>
-            {activeTrack.title}
-          </Text>
-          <Text
-            style={[styles.artistAlbum, { color: tokens.colors.subtleText }]}
-          >
-            {activeTrack.artist?.name ?? "Unknown Artist"} —{" "}
-            {activeTrack.album?.title ?? "Unknown Album"}
-          </Text>
+          <View style={styles.trackInfoContainer}>
+            <ScrollingText
+              text={activeTrack.title}
+              style={[styles.trackTitle, { color: tokens.colors.text }]}
+              maxWidth={180}
+            />
+            <ScrollingText
+              text={activeTrack.album?.title ?? "Unknown Album"}
+              style={[styles.albumName, { color: tokens.colors.subtleText }]}
+              maxWidth={180}
+            />
+          </View>
           <Button
             size="sm"
             variant="primary"
@@ -96,27 +218,11 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
 
         {/* Center - Progress and Controls */}
         <View style={styles.centerSection}>
-          <View style={styles.progressContainer} {...wheelProps as any}>
-            {isScrubbing && (
-              <View 
-                style={[
-                  styles.scrubTooltip, 
-                  { 
-                    backgroundColor: tokens.colors.surfaceElevated,
-                    left: `${progressPercentage}%`,
-                    shadowColor: tokens.colors.text,
-                  }
-                ]}
-              >
-                <Text style={[styles.scrubTooltipText, { color: tokens.colors.text }]}>
-                  {formatScrubTime(currentDisplayPosition)}
-                </Text>
-              </View>
-            )}
+          <View style={styles.progressContainer}>
             <Text
               style={[styles.timeText, { color: tokens.colors.subtleText }]}
             >
-              {formatTime(currentDisplayPosition)}
+              {formatTime(positionMs)}
             </Text>
             <View
               style={[
@@ -164,14 +270,14 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
               <IconSymbol
                 name="backward.fill"
                 size={16}
-                color={tokens.colors.text}
+                color={tokens.colors.primary}
               />
             </Pressable>
             <Pressable style={styles.playButton} onPress={handlePlayPause}>
               <IconSymbol
                 name={isPlaying ? "pause.fill" : "play.fill"}
                 size={20}
-                color={tokens.colors.text}
+                color={tokens.colors.primary}
               />
             </Pressable>
             <Pressable
@@ -184,7 +290,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
               <IconSymbol
                 name="forward.fill"
                 size={16}
-                color={tokens.colors.text}
+                color={tokens.colors.primary}
               />
             </Pressable>
             <Pressable
@@ -193,7 +299,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
                 e.stopPropagation();
               }}
             >
-              <IconSymbol name="repeat" size={16} color={tokens.colors.text} />
+              <IconSymbol name="repeat" size={16} color={tokens.colors.primary} />
             </Pressable>
           </View>
         </View>
@@ -203,24 +309,18 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
           <IconSymbol
             name="speaker.wave.2"
             size={16}
-            color={tokens.colors.text}
+            color={tokens.colors.primary}
           />
-          <View
-            style={[
-              styles.volumeSlider,
-              { backgroundColor: tokens.colors.surface },
-            ]}
-          >
-            <View
-              style={[
-                styles.volumeFill,
-                {
-                  width: "60%",
-                  backgroundColor: tokens.colors.primary,
-                },
-              ]}
-            />
-          </View>
+          <Slider
+            style={styles.volumeSlider}
+            minimumValue={0}
+            maximumValue={100}
+            value={volume * 100}
+            onSlidingComplete={handleVolumeChange}
+            minimumTrackTintColor={tokens.colors.primary}
+            maximumTrackTintColor={tokens.colors.surface}
+            thumbTintColor={tokens.colors.primary}
+          />
         </View>
       </View>
     </View>
@@ -235,7 +335,6 @@ const styles = StyleSheet.create({
     right: 0,
     height: 80,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.1)",
   },
   content: {
     flex: 1,
@@ -247,22 +346,36 @@ const styles = StyleSheet.create({
   },
   leftSection: {
     width: 280,
-    gap: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  trackInfoContainer: {
+    flex: 1,
+    gap: 2,
+  },
+  scrollingTextContainer: {
+    overflow: 'hidden',
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
   },
   trackTitle: {
     fontSize: 16,
     fontWeight: "600",
+    flexWrap: 'nowrap',
+    flexShrink: 0,
   },
-  artistAlbum: {
+  albumName: {
     fontSize: 12,
     fontWeight: "400",
+    flexWrap: 'nowrap',
+    flexShrink: 0,
   },
   tagButton: {
-    alignSelf: "flex-start",
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 4,
-    marginTop: 4,
+    flexShrink: 0,
   },
   centerSection: {
     flex: 1,
@@ -274,7 +387,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "100%",
     gap: 12,
-    position: "relative",
   },
   timeText: {
     fontSize: 12,
@@ -315,28 +427,6 @@ const styles = StyleSheet.create({
   },
   volumeSlider: {
     flex: 1,
-    height: 4,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  volumeFill: {
-    height: "100%",
-  },
-  scrubTooltip: {
-    position: "absolute",
-    top: -35,
-    transform: [{ translateX: -25 }],
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-    zIndex: 1000,
-  },
-  scrubTooltipText: {
-    fontSize: 12,
-    fontWeight: "600",
+    height: 20,
   },
 });

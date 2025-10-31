@@ -1,7 +1,7 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { IconButton } from '@/src/components/ui/icon-button';
 import { playTrack } from '@/src/services/playback-service';
-import { useLibraryStore } from '@/src/state';
+import { useLibraryStore, usePlayerStore } from '@/src/state';
 import { useTheme } from '@/src/theme/provider';
 import React, { useEffect, useState } from 'react';
 import {
@@ -215,6 +215,8 @@ interface ArtistDetailViewProps {
 
 function ArtistDetailView({ artist, onBack, onPlayAlbum, tokens }: ArtistDetailViewProps & { tokens: any }) {
   const styles = getStyles(tokens);
+  const { activeTrack, isPlaying } = usePlayerStore();
+
   return (
     <>
       <View style={styles.header}>
@@ -274,33 +276,53 @@ function ArtistDetailView({ artist, onBack, onPlayAlbum, tokens }: ArtistDetailV
             </View>
           </View>
         )}
-        renderItem={({ item: track }) => (
-          <Pressable
-            style={({ pressed }) => [
-              styles.trackItem,
-              {
-                backgroundColor: pressed
-                  ? tokens.colors.surfaceElevated
-                  : 'transparent',
-              },
-            ]}
-            onPress={() => playTrack(track)}
-          >
+        renderItem={({ item: track }) => {
+          const isCurrentlyPlaying = activeTrack?.id === track.id && isPlaying;
+          
+          return (
+            <Pressable
+              style={({ pressed }) => [
+                styles.trackItem,
+                {
+                  backgroundColor: isCurrentlyPlaying
+                    ? tokens.colors.primary + '20' // Semi-transparent primary color for currently playing
+                    : pressed
+                    ? tokens.colors.surfaceElevated
+                    : tokens.colors.surface,
+                },
+              ]}
+              onPress={() => playTrack(track)}
+            >
             <View style={styles.trackContent}>
-              <Text style={[styles.trackNumber, { color: tokens.colors.subtleText }]}>
-                {track.trackNumber || '—'}
-              </Text>
+              {/* Album Artwork Placeholder */}
+              <View style={[styles.albumArt, { backgroundColor: tokens.colors.surfaceElevated }]}>
+                <IconSymbol name="music.note" size={20} color={tokens.colors.subtleText} />
+              </View>
+
+              {/* Track Info */}
               <View style={styles.trackInfo}>
-                <Text style={[styles.trackTitle, { color: tokens.colors.text }]} numberOfLines={1}>
+                <Text
+                  style={[styles.trackTitle, { color: tokens.colors.text }]}
+                  numberOfLines={1}
+                >
                   {track.title}
                 </Text>
-                <Text style={[styles.trackDuration, { color: tokens.colors.subtleText }]}>
-                  {formatTrackDuration(track.durationMs)}
+                <Text
+                  style={[styles.trackSubtitle, { color: tokens.colors.subtleText }]}
+                  numberOfLines={1}
+                >
+                  {track.artist?.name ?? 'Unknown Artist'} • {track.album?.title ?? 'Unknown Album'}
                 </Text>
               </View>
+
+              {/* Track Duration */}
+              <Text style={[styles.trackDuration, { color: tokens.colors.subtleText }]}>
+                {formatTrackDuration(track.durationMs)}
+              </Text>
             </View>
           </Pressable>
-        )}
+          );
+        }}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.contentContainer}
         stickySectionHeadersEnabled={false}
@@ -439,24 +461,29 @@ function getStyles(tokens: any) {
     alignItems: 'center',
     gap: 16,
   },
-  trackNumber: {
-    width: 24,
-    fontSize: 14,
-    textAlign: 'center',
+  albumArt: {
+    width: 48,
+    height: 48,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   trackInfo: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 2,
   },
   trackTitle: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '400',
+    fontSize: 16,
+    fontWeight: '500',
+    lineHeight: 20,
+  },
+  trackSubtitle: {
+    fontSize: 14,
+    lineHeight: 18,
   },
   trackDuration: {
     fontSize: 14,
+    fontWeight: '400',
   },
 
   // Empty State
