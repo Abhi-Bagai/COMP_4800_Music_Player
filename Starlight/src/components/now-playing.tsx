@@ -28,10 +28,10 @@ interface NowPlayingProps {
 
 export function NowPlaying({ visible, onClose }: NowPlayingProps) {
   const { tokens } = useTheme();
-  const { activeTrack, isPlaying, volume } = usePlayerStore();
+  const { activeTrack, isPlaying, volume, positionMs, setScrubbingPosition } = usePlayerStore();
   const [slideAnim] = useState(new Animated.Value(screenHeight));
   
-  const { currentDisplayPosition, isScrubbing, wheelProps, formatTime: formatScrubTime } = useTrackScrubbing({
+  const { currentDisplayPosition, isScrubbing, wheelProps, formatTime: formatScrubTime, duration } = useTrackScrubbing({
     sensitivity: 50,
     debounceMs: 150,
   });
@@ -49,6 +49,30 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
     await togglePlayPause();
   };
 
+  const handleSeekStart = () => {
+    // Start scrubbing when slider drag begins
+    const duration = activeTrack?.durationMs ?? 0;
+    if (duration > 0) {
+      setScrubbingPosition(positionMs);
+    }
+  };
+
+  const handleSeekChange = (rawValue: number | number[]) => {
+    // Update scrubbing position during slider drag
+    const duration = activeTrack?.durationMs ?? 0;
+    if (!Number.isFinite(duration) || duration <= 0) return;
+
+    const value = Array.isArray(rawValue) ? rawValue[0] : rawValue;
+    const percent = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(percent)) return;
+
+    const clampedPercent = Math.min(Math.max(percent, 0), 100);
+    const seekPosition = (clampedPercent / 100) * duration;
+    if (!Number.isFinite(seekPosition)) return;
+
+    setScrubbingPosition(seekPosition);
+  };
+
   const handleSeek = async (rawValue: number | number[]) => {
     const duration = activeTrack?.durationMs ?? 0;
     if (!Number.isFinite(duration) || duration <= 0) return;
@@ -61,6 +85,8 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
     const seekPosition = (clampedPercent / 100) * duration;
     if (!Number.isFinite(seekPosition)) return;
 
+    // End scrubbing and seek to position
+    setScrubbingPosition(null);
     await seekTo(seekPosition);
   };
 
@@ -175,6 +201,8 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
                 minimumValue={0}
                 maximumValue={100}
                 value={progressPercentage}
+                onSlidingStart={handleSeekStart}
+                onValueChange={handleSeekChange}
                 onSlidingComplete={handleSeek}
                 minimumTrackTintColor={tokens.colors.primary}
                 maximumTrackTintColor={tokens.colors.surfaceElevated}
