@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Pressable,
   ScrollView,
@@ -15,6 +15,7 @@ import { useTheme } from "@/src/theme/provider";
 interface SidebarNavigationProps {
   onViewChange: (view: string) => void;
   currentView: string;
+  onSearchChange?: (searchText: string) => void;
 }
 
 interface NavigationItem {
@@ -60,12 +61,17 @@ const navigationItems: NavigationItem[] = [
 export function SidebarNavigation({
   onViewChange,
   currentView,
+  onSearchChange,
 }: SidebarNavigationProps) {
   const { tokens } = useTheme();
   const [expandedItems, setExpandedItems] = useState<string[]>([
     "library",
   ]);
   const [searchText, setSearchText] = useState("");
+
+  useEffect(() => {
+    onSearchChange?.(searchText);
+  }, [searchText, onSearchChange]);
 
   const toggleExpanded = (itemId: string) => {
     setExpandedItems((prev) =>

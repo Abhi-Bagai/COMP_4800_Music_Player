@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Alert,
   FlatList,
@@ -69,6 +69,7 @@ export default function HomeScreen() {
   const [showGearMenu, setShowGearMenu] = useState(false);
   const [showAddMusicMenu, setShowAddMusicMenu] = useState(false);
   const [trackTags, setTrackTags] = useState<{[trackId: string]: string[]}>({});
+  const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
     hydrateLibraryFromDatabase();
@@ -84,6 +85,22 @@ export default function HomeScreen() {
       console.error('Error loading track tags:', error);
     }
   };
+
+  // Filter tracks based on search text
+  const filteredTracks = useMemo(() => {
+    if (!searchText.trim()) {
+      return tracks;
+    }
+    
+    const searchLower = searchText.toLowerCase().trim();
+    return tracks.filter((track) => {
+      const titleMatch = track.title?.toLowerCase().includes(searchLower);
+      const artistMatch = track.artist?.name?.toLowerCase().includes(searchLower);
+      const albumMatch = track.album?.title?.toLowerCase().includes(searchLower);
+      
+      return titleMatch || artistMatch || albumMatch;
+    });
+  }, [tracks, searchText]);
 
   const handlePickMusicFolders = () => {
     setShowAddMusicMenu(true);
@@ -448,6 +465,7 @@ export default function HomeScreen() {
           <SidebarNavigation
             onViewChange={setSidebarView}
             currentView={sidebarView}
+            onSearchChange={setSearchText}
           />
         </View>
 
@@ -468,7 +486,7 @@ export default function HomeScreen() {
           {sidebarView === "library" ? (
             tracks.length > 0 ? (
               <TableView
-                tracks={tracks.map((track) => ({
+                tracks={filteredTracks.map((track) => ({
                   id: track.id,
                   title: track.title,
                   artist: track.artist,
