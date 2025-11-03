@@ -27,6 +27,118 @@ interface PlaylistsScreenProps {
   onPlaylistPress: (playlistId: string) => void;
 }
 
+interface PlaylistItemProps {
+  item: any;
+  tokens: any;
+  hoveredPlaylistId: string | null;
+  draggedTrack: any;
+  onPlaylistPress: (playlistId: string) => void;
+  onDeletePlaylist: (playlistId: string, playlistName: string) => void;
+  onDrop: (playlistId: string) => Promise<void>;
+  setPlaylistRefs: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+}
+
+function PlaylistItem({
+  item,
+  tokens,
+  hoveredPlaylistId,
+  draggedTrack,
+  onPlaylistPress,
+  onDeletePlaylist,
+  onDrop,
+  setPlaylistRefs,
+}: PlaylistItemProps) {
+  const playlistRef = React.useRef<View>(null);
+  const isHovered = hoveredPlaylistId === item.id;
+
+  // Store ref for drag position checking
+  React.useEffect(() => {
+    setPlaylistRefs((prev) => ({ ...prev, [item.id]: playlistRef }));
+  }, [item.id, setPlaylistRefs]);
+
+  const styles = getStyles(tokens);
+
+  return (
+    <Swipeable
+      overshootRight={false}
+      renderRightActions={() => (
+        <Pressable
+          onPress={() => onDeletePlaylist(item.id, item.name)}
+          style={[styles.swipeDelete, { backgroundColor: tokens.colors.danger }]}
+          accessibilityLabel="Delete playlist"
+        >
+          <IconSymbol name="trash" size={20} color={tokens.colors.surface} />
+        </Pressable>
+      )}
+    >
+      <View ref={playlistRef}>
+        <Pressable
+          data-playlist-id={Platform.OS === 'web' ? item.id : undefined}
+          style={({ pressed }) => [
+            styles.playlistItem,
+            {
+              backgroundColor: isHovered && draggedTrack
+                ? tokens.colors.primary + '20'
+                : pressed
+                ? tokens.colors.surfaceElevated
+                : tokens.colors.surface,
+              borderWidth: isHovered && draggedTrack ? 2 : 0,
+              borderColor: isHovered && draggedTrack ? tokens.colors.primary : 'transparent',
+            },
+          ]}
+          onPress={async () => {
+            if (draggedTrack) {
+              await onDrop(item.id);
+            } else {
+              onPlaylistPress(item.id);
+            }
+          }}
+        >
+          <View style={styles.playlistContent}>
+            {/* Playlist Artwork Placeholder */}
+            <View style={[styles.playlistArt, { backgroundColor: tokens.colors.surfaceElevated }]}>
+              <IconSymbol name="music.note.list" size={24} color={tokens.colors.subtleText} />
+            </View>
+
+            {/* Playlist Info */}
+            <View style={styles.playlistInfo}>
+              <Text
+                style={[styles.playlistName, { color: tokens.colors.text }]}
+                numberOfLines={1}
+              >
+                {item.name}
+              </Text>
+              {item.description && (
+                <Text
+                  style={[styles.playlistDescription, { color: tokens.colors.subtleText }]}
+                  numberOfLines={1}
+                >
+                  {item.description}
+                </Text>
+              )}
+              <Text style={[styles.playlistStats, { color: tokens.colors.subtleText }]}>
+                {item.trackCount} songs
+              </Text>
+            </View>
+
+            {/* Delete Button */}
+            <IconButton
+              icon={
+                <IconSymbol name="trash" size={20} color={tokens.colors.danger} />
+              }
+              onPress={(e) => {
+                e.stopPropagation();
+                onDeletePlaylist(item.id, item.name);
+              }}
+              accessibilityLabel="Delete playlist"
+            />
+          </View>
+        </Pressable>
+      </View>
+    </Swipeable>
+  );
+}
+
 export function PlaylistsScreen({ onPlaylistPress }: PlaylistsScreenProps) {
   const { tokens } = useTheme();
   const { activeTrack } = usePlayerStore();
@@ -229,96 +341,18 @@ export function PlaylistsScreen({ onPlaylistPress }: PlaylistsScreenProps) {
             styles.contentContainer,
             activeTrack && styles.contentContainerWithMini,
           ]}
-          renderItem={({ item }) => {
-            const playlistRef = React.useRef<View>(null);
-            const isHovered = hoveredPlaylistId === item.id;
-            const canDrop = draggedTrack && !isTrackInPlaylist?.(item.id, draggedTrack.id);
-
-            // Store ref for drag position checking
-            React.useEffect(() => {
-              setPlaylistRefs((prev) => ({ ...prev, [item.id]: playlistRef }));
-            }, [item.id]);
-
-            return (
-              <Swipeable
-                overshootRight={false}
-                renderRightActions={() => (
-                  <Pressable
-                    onPress={() => handleDeletePlaylist(item.id, item.name)}
-                    style={[styles.swipeDelete, { backgroundColor: tokens.colors.danger }]}
-                    accessibilityLabel="Delete playlist"
-                  >
-                    <IconSymbol name="trash" size={20} color={tokens.colors.surface} />
-                  </Pressable>
-                )}
-              >
-                <View ref={playlistRef}>
-                  <Pressable
-                    data-playlist-id={Platform.OS === 'web' ? item.id : undefined}
-                    style={({ pressed }) => [
-                      styles.playlistItem,
-                      {
-                        backgroundColor: isHovered && draggedTrack
-                          ? tokens.colors.primary + '20'
-                          : pressed
-                          ? tokens.colors.surfaceElevated
-                          : tokens.colors.surface,
-                        borderWidth: isHovered && draggedTrack ? 2 : 0,
-                        borderColor: isHovered && draggedTrack ? tokens.colors.primary : 'transparent',
-                      },
-                    ]}
-                    onPress={async () => {
-                      if (draggedTrack) {
-                        await handleDrop(item.id);
-                      } else {
-                        onPlaylistPress(item.id);
-                      }
-                    }}
-                  >
-                <View style={styles.playlistContent}>
-                  {/* Playlist Artwork Placeholder */}
-                  <View style={[styles.playlistArt, { backgroundColor: tokens.colors.surfaceElevated }]}>
-                    <IconSymbol name="music.note.list" size={24} color={tokens.colors.subtleText} />
-                  </View>
-
-                  {/* Playlist Info */}
-                  <View style={styles.playlistInfo}>
-                    <Text
-                      style={[styles.playlistName, { color: tokens.colors.text }]}
-                      numberOfLines={1}
-                    >
-                      {item.name}
-                    </Text>
-                    {item.description && (
-                      <Text
-                        style={[styles.playlistDescription, { color: tokens.colors.subtleText }]}
-                        numberOfLines={1}
-                      >
-                        {item.description}
-                      </Text>
-                    )}
-                    <Text style={[styles.playlistStats, { color: tokens.colors.subtleText }]}>
-                      {item.trackCount} songs
-                    </Text>
-                  </View>
-
-                  {/* Delete Button */}
-                  <IconButton
-                    icon={
-                      <IconSymbol name="trash" size={20} color={tokens.colors.danger} />
-                    }
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      handleDeletePlaylist(item.id, item.name);
-                    }}
-                    accessibilityLabel="Delete playlist"
-                  />
-                </View>
-                  </Pressable>
-                </View>
-              </Swipeable>
-            );
-          }}
+          renderItem={({ item }) => (
+            <PlaylistItem
+              item={item}
+              tokens={tokens}
+              hoveredPlaylistId={hoveredPlaylistId}
+              draggedTrack={draggedTrack}
+              onPlaylistPress={onPlaylistPress}
+              onDeletePlaylist={handleDeletePlaylist}
+              onDrop={handleDrop}
+              setPlaylistRefs={setPlaylistRefs}
+            />
+          )}
           keyExtractor={(item) => item.id}
         />
       ) : (
