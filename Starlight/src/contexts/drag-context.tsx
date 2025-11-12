@@ -47,6 +47,7 @@ export function DragProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!draggedTrack || !dragPosition) {
+      console.log('[DragContext] No drag active; clearing hover');
       if (hoveredPlaylistId) {
         setHoveredPlaylistId(null);
       }
@@ -57,6 +58,7 @@ export function DragProvider({ children }: { children: ReactNode }) {
 
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       const element = document.elementFromPoint(dragPosition.x, dragPosition.y);
+      console.log('[DragContext] elementFromPoint', dragPosition, element);
       if (element) {
         let current: HTMLElement | null = element as HTMLElement;
 
@@ -80,6 +82,7 @@ export function DragProvider({ children }: { children: ReactNode }) {
 
     if (!nextHoveredId) {
       Object.entries(dropZoneLayouts).forEach(([id, layout]) => {
+        console.log('[DragContext] Checking layout', id, layout);
         if (!layout) return;
         const withinX = dragPosition.x >= layout.x && dragPosition.x <= layout.x + layout.width;
         const withinY = dragPosition.y >= layout.y && dragPosition.y <= layout.y + layout.height;
@@ -95,6 +98,7 @@ export function DragProvider({ children }: { children: ReactNode }) {
       if (nextHoveredId) {
         setLastHoveredPlaylistId(nextHoveredId);
       }
+      console.log('[DragContext] Hover changed to', nextHoveredId);
     }
   }, [dragPosition, draggedTrack, dropZoneLayouts, hoveredPlaylistId]);
 

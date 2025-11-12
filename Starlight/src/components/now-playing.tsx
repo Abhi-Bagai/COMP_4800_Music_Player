@@ -94,8 +94,11 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
 
     dropProcessingRef.current = true;
     try {
+      console.log('[NowPlaying] Dropping track', activeTrack.id, 'onto playlist', playlistId);
+
       const alreadyInPlaylist = await isTrackInPlaylist(playlistId, activeTrack.id);
       if (alreadyInPlaylist) {
+        console.log('[NowPlaying] Track already in playlist', playlistId);
         if (Platform.OS === 'web') {
           window.alert?.('This track is already in the playlist');
         }
@@ -109,6 +112,7 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
         window.alert?.(`Added "${activeTrack.title}" to playlist`);
       }
 
+      console.log('[NowPlaying] Track added successfully');
       return true;
     } catch (error) {
       console.error('Failed to add track to playlist', error);
@@ -231,6 +235,7 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
 
     setIsDraggingTrack(false);
     const targetPlaylistId = hoveredPlaylistId ?? lastHoveredPlaylistId;
+    console.log('[NowPlaying] Drag end. hovered:', hoveredPlaylistId, 'last:', lastHoveredPlaylistId, 'target:', targetPlaylistId);
 
     if (targetPlaylistId) {
       addActiveTrackToPlaylist(targetPlaylistId).finally(() => {

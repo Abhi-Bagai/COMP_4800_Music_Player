@@ -16,6 +16,7 @@ import { Text } from "@/src/components/ui/text";
 import { useTheme } from "@/src/theme/provider";
 import { usePlayerStore } from "@/src/state";
 import { useDrag } from "@/src/contexts/drag-context";
+import { addTrackToPlaylistById, hydratePlaylistsFromDatabase, isTrackInPlaylist } from "@/src/services/playlist-service";
 
 interface Track {
   id: string;
@@ -355,11 +356,24 @@ function TableRow({
 }: TableRowProps) {
   const { tokens } = useTheme();
   const { activeTrack, isPlaying } = usePlayerStore();
-  const { setDraggedTrack, setDragPosition } = useDrag();
+  const {
+    setDraggedTrack,
+    setDragPosition,
+    hoveredPlaylistId,
+    setHoveredPlaylistId,
+    lastHoveredPlaylistId,
+    resetLastHoveredPlaylistId,
+  } = useDrag();
   const [isHovered, setIsHovered] = React.useState(false);
   const [isPressed, setIsPressed] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
   const rowRef = React.useRef<View>(null);
+  const dropProcessingRef = React.useRef(false);
+  const isDraggingRef = React.useRef(false);
+
+  React.useEffect(() => {
+    isDraggingRef.current = isDragging;
+  }, [isDragging]);
 
   // Check if this track is currently playing
   const isCurrentlyPlaying = activeTrack?.id === track.id && isPlaying;
@@ -403,27 +417,92 @@ function TableRow({
     }
   };
 
-  const handleDragStart = (event: any) => {
-    const { pageX, pageY } = event.nativeEvent;
-    setIsDragging(true);
-    setDraggedTrack({
-      id: track.id,
-      title: track.title,
-      artist: track.artist,
-    });
-    setDragPosition({ x: pageX, y: pageY });
-  };
+  const handleDragStart = React.useCallback(
+    (event: any) => {
+      const { pageX, pageY } = event.nativeEvent;
+      setIsDragging(true);
+      console.log('[TableRow] drag start', track.id, pageX, pageY);
+      setDraggedTrack({
+        id: track.id,
+        title: track.title,
+        artist: track.artist,
+      });
+      setDragPosition({ x: pageX, y: pageY });
+    },
+    [setDragPosition, setDraggedTrack, track.artist, track.id, track.title]
+  );
 
-  const handleDragUpdate = (event: any) => {
-    const { pageX, pageY } = event.nativeEvent;
-    setDragPosition({ x: pageX, y: pageY });
-  };
+  const handleDragUpdate = React.useCallback(
+    (event: any) => {
+      const { pageX, pageY } = event.nativeEvent;
+      console.log('[TableRow] drag move', track.id, pageX, pageY);
+      setDragPosition({ x: pageX, y: pageY });
+    },
+    [setDragPosition, track.id]
+  );
 
-  const handleDragEnd = () => {
+  const handleDragEnd = React.useCallback(() => {
+    if (!isDragging) return;
+
+    const targetPlaylistId = hoveredPlaylistId ?? lastHoveredPlaylistId;
+    const trackId = track.id;
+    const trackTitle = track.title;
+
     setIsDragging(false);
     setDraggedTrack(null);
     setDragPosition(null);
-  };
+    setHoveredPlaylistId(null);
+    resetLastHoveredPlaylistId();
+    console.log('[TableRow] drag end', track.id, 'target', targetPlaylistId);
+
+    if (!targetPlaylistId) {
+      return;
+    }
+
+    if (dropProcessingRef.current) {
+      return;
+    }
+
+    dropProcessingRef.current = true;
+    (async () => {
+      try {
+        const alreadyInPlaylist = await isTrackInPlaylist(targetPlaylistId, trackId);
+        if (alreadyInPlaylist) {
+          if (Platform.OS === "web") {
+            window.alert?.("This track is already in the playlist");
+          }
+          return;
+        }
+
+        await addTrackToPlaylistById(targetPlaylistId, trackId);
+
+        // addTrackToPlaylistById already hydrates playlists, but ensure UI stays up-to-date.
+        await hydratePlaylistsFromDatabase();
+
+        if (Platform.OS === "web") {
+          window.alert?.(`Added "${trackTitle}" to playlist`);
+        }
+      } catch (error) {
+        console.error("Failed to add track from Library drag-and-drop", error);
+        if (Platform.OS === "web") {
+          window.alert?.("Failed to add track to playlist");
+        }
+      } finally {
+        dropProcessingRef.current = false;
+        console.log('[TableRow] drop finished');
+      }
+    })();
+  }, [
+    hoveredPlaylistId,
+    isDragging,
+    lastHoveredPlaylistId,
+    resetLastHoveredPlaylistId,
+    setDragPosition,
+    setDraggedTrack,
+    setHoveredPlaylistId,
+    track.id,
+    track.title,
+  ]);
 
   const rowContent = (
     <Pressable
@@ -453,9 +532,18 @@ function TableRow({
       // Handle right-click context menu on web
       {...(Platform.OS === "web" && {
         onContextMenu: handleContextMenu,
+        onMouseMove: isDragging
+          ? (event: React.MouseEvent<View, MouseEvent>) =>
+              handleDragUpdate({ nativeEvent: event.nativeEvent })
+          : undefined,
+      })}
+      {...(Platform.OS !== "web" && {
+        onTouchMove: isDragging
+          ? (event: any) => handleDragUpdate(event)
+          : undefined,
       })}
     >
-      {columns.map((column, columnIndex) => {
+      {columns.map((column: ColumnConfig, columnIndex: number) => {
         let content;
 
         switch (column.key) {
@@ -688,7 +776,21 @@ function TableRow({
         domNode.removeEventListener('mousedown', handleMouseDown);
       };
     }
-  }, [track.id]);
+  }, [track.id, handleDragEnd, handleDragStart, handleDragUpdate]);
+
+  React.useEffect(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") return;
+
+    const handleGlobalMouseUp = () => {
+      if (!isDraggingRef.current) return;
+      handleDragEnd();
+    };
+
+    window.addEventListener("mouseup", handleGlobalMouseUp, true);
+    return () => {
+      window.removeEventListener("mouseup", handleGlobalMouseUp, true);
+    };
+  }, [handleDragEnd]);
 
   // Wrap with gesture handlers for drag functionality
   if (Platform.OS === "web") {
