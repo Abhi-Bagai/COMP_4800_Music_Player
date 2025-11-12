@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Pressable,
   ScrollView,
@@ -8,9 +8,11 @@ import {
 } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Button } from "@/src/components/ui/button";
 import { Text } from "@/src/components/ui/text";
+import { usePlaylistStore } from "@/src/state/playlist-store";
+import { useDrag } from "@/src/contexts/drag-context";
 import { useTheme } from "@/src/theme/provider";
+import { Platform } from "react-native";
 
 interface SidebarNavigationProps {
   onViewChange: (view: string) => void;
@@ -64,8 +66,11 @@ export function SidebarNavigation({
   onSearchChange,
 }: SidebarNavigationProps) {
   const { tokens } = useTheme();
+  const { playlists } = usePlaylistStore();
+  const { draggedTrack, hoveredPlaylistId } = useDrag();
   const [expandedItems, setExpandedItems] = useState<string[]>([
     "library",
+    "playlists",
   ]);
   const [searchText, setSearchText] = useState("");
 
@@ -81,10 +86,34 @@ export function SidebarNavigation({
     );
   };
 
+  const handlePlaylistPress = useCallback(
+    (playlistId: string) => {
+      onViewChange(`playlist:${playlistId}`);
+    },
+    [onViewChange]
+  );
+
+  const navigationItemsWithPlaylists = useMemo(() => {
+    return navigationItems.map((item) =>
+      item.id === "playlists"
+        ? {
+            ...item,
+            children: playlists.map((playlist) => ({
+              id: playlist.id,
+              label: playlist.name,
+              icon: "music.note.list",
+            })),
+          }
+        : item
+    );
+  }, [playlists]);
+
   const renderNavigationItem = (item: NavigationItem, level = 0) => {
     const isExpanded = expandedItems.includes(item.id);
     const isSelected = currentView === item.id;
-    const hasChildren = item.children && item.children.length > 0;
+    const isPlaylistsNode = item.id === "playlists";
+    const children = isPlaylistsNode ? navigationItemsWithPlaylists.find((nav) => nav.id === "playlists")?.children : item.children;
+    const hasChildren = !!children && children.length > 0;
 
     return (
       <View key={item.id}>
@@ -101,7 +130,10 @@ export function SidebarNavigation({
             },
           ]}
           onPress={() => {
-            if (hasChildren) {
+            if (isPlaylistsNode) {
+              toggleExpanded(item.id);
+              onViewChange(item.id);
+            } else if (hasChildren) {
               toggleExpanded(item.id);
             } else {
               onViewChange(item.id);
@@ -142,18 +174,30 @@ export function SidebarNavigation({
 
         {hasChildren && isExpanded && (
           <View style={styles.childrenContainer}>
-            {item.children?.map((child) => (
-              <View key={child.id}>
-                {renderNavigationItem(child, level + 1)}
-                {child.children && expandedItems.includes(child.id) && (
-                  <View style={styles.childrenContainer}>
-                    {child.children.map((grandChild) =>
-                      renderNavigationItem(grandChild, level + 2)
+            {isPlaylistsNode
+              ? playlists.map((playlist) => (
+                  <SidebarPlaylistNavItem
+                    key={playlist.id}
+                    playlist={playlist}
+                    level={level + 1}
+                    tokens={tokens}
+                    isDragged={!!draggedTrack}
+                    isHovered={hoveredPlaylistId === playlist.id}
+                    onPress={handlePlaylistPress}
+                  />
+                ))
+              : item.children?.map((child) => (
+                  <View key={child.id}>
+                    {renderNavigationItem(child, level + 1)}
+                    {child.children && expandedItems.includes(child.id) && (
+                      <View style={styles.childrenContainer}>
+                        {child.children.map((grandChild) =>
+                          renderNavigationItem(grandChild, level + 2)
+                        )}
+                      </View>
                     )}
                   </View>
-                )}
-              </View>
-            ))}
+                ))}
           </View>
         )}
       </View>
@@ -239,3 +283,110 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 });
+
+interface SidebarPlaylistNavItemProps {
+  playlist: { id: string; name: string; trackCount: number };
+  level: number;
+  tokens: any;
+  isDragged: boolean;
+  isHovered: boolean;
+  onPress: (playlistId: string) => void;
+}
+
+function SidebarPlaylistNavItem({
+  playlist,
+  level,
+  tokens,
+  isDragged,
+  isHovered,
+  onPress,
+}: SidebarPlaylistNavItemProps) {
+  const { registerDropZoneLayout, unregisterDropZoneLayout } = useDrag();
+  const containerRef = useRef<View>(null);
+
+  const updateDropZoneLayout = useCallback(() => {
+    const node = containerRef.current as any;
+    if (node?.measureInWindow) {
+      node.measureInWindow((x: number, y: number, width: number, height: number) => {
+        registerDropZoneLayout(playlist.id, { x, y, width, height });
+      });
+    }
+  }, [playlist.id, registerDropZoneLayout]);
+
+  useEffect(() => {
+    updateDropZoneLayout();
+  }, [updateDropZoneLayout]);
+
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      const handleResize = () => updateDropZoneLayout();
+      window.addEventListener("resize", handleResize);
+      return () => {
+        window.removeEventListener("resize", handleResize);
+      };
+    }
+    return;
+  }, [updateDropZoneLayout]);
+
+  useEffect(
+    () => () => {
+      unregisterDropZoneLayout(playlist.id);
+    },
+    [playlist.id, unregisterDropZoneLayout]
+  );
+
+  return (
+    <View
+      ref={containerRef}
+      onLayout={updateDropZoneLayout}
+      nativeID={Platform.OS === "web" ? `playlist-drop-${playlist.id}` : undefined}
+    >
+      <Pressable
+        style={({ pressed }) => [
+          styles.navItem,
+          {
+            backgroundColor: isHovered && isDragged
+              ? tokens.colors.primary + "20"
+              : pressed
+              ? tokens.colors.surfaceElevated
+              : "transparent",
+            paddingLeft: 16 + level * 16,
+            borderWidth: isHovered && isDragged ? 1 : 0,
+            borderColor: isHovered && isDragged ? tokens.colors.primary : "transparent",
+          },
+        ]}
+        onPress={() => onPress(playlist.id)}
+      >
+        <View style={styles.navItemContent}>
+          <IconSymbol
+            name="music.note.list"
+            size={14}
+            color={isHovered && isDragged ? tokens.colors.primary : tokens.colors.subtleText}
+          />
+          <View style={{ flex: 1 }}>
+            <Text
+              style={[
+                styles.navItemText,
+                {
+                  color: tokens.colors.text,
+                  fontWeight: "500",
+                },
+              ]}
+              numberOfLines={1}
+            >
+              {playlist.name}
+            </Text>
+            <Text
+              style={{
+                color: tokens.colors.subtleText,
+                fontSize: 12,
+              }}
+            >
+              {playlist.trackCount} {playlist.trackCount === 1 ? "track" : "tracks"}
+            </Text>
+          </View>
+        </View>
+      </Pressable>
+    </View>
+  );
+}

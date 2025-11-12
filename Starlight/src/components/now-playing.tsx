@@ -1,5 +1,5 @@
 import Slider from '@react-native-community/slider';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Animated,
     Dimensions,
@@ -9,6 +9,7 @@ import {
     StyleSheet,
     View,
 } from 'react-native';
+import type { ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -16,8 +17,11 @@ import { IconButton } from '@/src/components/ui/icon-button';
 import { Text } from '@/src/components/ui/text';
 import { useTrackScrubbing } from '@/src/hooks/use-track-scrubbing';
 import { seekTo, setVolume, skipNext, skipPrevious, togglePlayPause } from '@/src/services/playback-service';
+import { useDrag } from '@/src/contexts/drag-context';
 import { usePlayerStore } from '@/src/state';
 import { useTheme } from '@/src/theme/provider';
+import { LongPressGestureHandler, PanGestureHandler, State } from 'react-native-gesture-handler';
+import { addTrackToPlaylistById, isTrackInPlaylist, hydratePlaylistsFromDatabase } from '@/src/services/playlist-service';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -26,10 +30,94 @@ interface NowPlayingProps {
   onClose: () => void;
 }
 
+type PointerLikeEvent = {
+  pageX?: number;
+  pageY?: number;
+  clientX?: number;
+  clientY?: number;
+  absoluteX?: number;
+  absoluteY?: number;
+  x?: number;
+  y?: number;
+  locationX?: number;
+  locationY?: number;
+};
+
+const resolvePointerPosition = (event: any) => {
+  const nativeEvent: PointerLikeEvent | MouseEvent | null =
+    event?.nativeEvent ?? event ?? null;
+
+  if (!nativeEvent) {
+    return { x: 0, y: 0 };
+  }
+
+  const potentialX = [
+    (nativeEvent as any).clientX,
+    (nativeEvent as any).pageX,
+    (nativeEvent as any).absoluteX,
+    (nativeEvent as any).x,
+    (nativeEvent as any).locationX,
+  ].find((value) => typeof value === 'number');
+
+  const potentialY = [
+    (nativeEvent as any).clientY,
+    (nativeEvent as any).pageY,
+    (nativeEvent as any).absoluteY,
+    (nativeEvent as any).y,
+    (nativeEvent as any).locationY,
+  ].find((value) => typeof value === 'number');
+
+  return {
+    x: typeof potentialX === 'number' ? potentialX : 0,
+    y: typeof potentialY === 'number' ? potentialY : 0,
+  };
+};
+
 export function NowPlaying({ visible, onClose }: NowPlayingProps) {
   const { tokens } = useTheme();
   const { activeTrack, isPlaying, positionMs, volume, setScrubbingPosition } = usePlayerStore();
+  const {
+    setDraggedTrack,
+    setDragPosition,
+    hoveredPlaylistId,
+    setHoveredPlaylistId,
+  } = useDrag();
   const [slideAnim] = useState(new Animated.Value(screenHeight));
+  const trackInfoRef = useRef<View | null>(null);
+  const [isDraggingTrack, setIsDraggingTrack] = useState(false);
+  const dropProcessingRef = useRef(false);
+
+  const addActiveTrackToPlaylist = useCallback(async (playlistId: string) => {
+    if (!activeTrack || dropProcessingRef.current) return false;
+
+    dropProcessingRef.current = true;
+    try {
+      const alreadyInPlaylist = await isTrackInPlaylist(playlistId, activeTrack.id);
+      if (alreadyInPlaylist) {
+        if (Platform.OS === 'web') {
+          window.alert?.('This track is already in the playlist');
+        }
+        return false;
+      }
+
+      await addTrackToPlaylistById(playlistId, activeTrack.id);
+      await hydratePlaylistsFromDatabase();
+
+      if (Platform.OS === 'web') {
+        window.alert?.(`Added "${activeTrack.title}" to playlist`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Failed to add track to playlist', error);
+      if (Platform.OS === 'web') {
+        window.alert?.('Failed to add track to playlist');
+      }
+      return false;
+    } finally {
+      dropProcessingRef.current = false;
+    }
+  }, [activeTrack]);
   
   const { currentDisplayPosition, isScrubbing, wheelProps, formatTime: formatScrubTime } = useTrackScrubbing({
     sensitivity: 50,
@@ -117,7 +205,137 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
     return Math.min(base, 420);
   }, []);
 
+  const handleTrackDragStart = useCallback((event: any) => {
+    if (!activeTrack) return;
+
+    const { x, y } = resolvePointerPosition(event);
+    setIsDraggingTrack(true);
+    setHoveredPlaylistId(null);
+    setDraggedTrack({
+      id: activeTrack.id,
+      title: activeTrack.title,
+      artist: activeTrack.artist ?? null,
+    });
+    setDragPosition({ x, y });
+  }, [activeTrack, setDragPosition, setDraggedTrack, setHoveredPlaylistId]);
+
+  const handleTrackDragMove = useCallback((event: any) => {
+    const { x, y } = resolvePointerPosition(event);
+    setDragPosition({ x, y });
+  }, [setDragPosition]);
+
+  const handleTrackDragEnd = useCallback(() => {
+    if (!isDraggingTrack) return;
+
+    setIsDraggingTrack(false);
+    const targetPlaylistId = hoveredPlaylistId;
+
+    if (targetPlaylistId) {
+      addActiveTrackToPlaylist(targetPlaylistId).finally(() => {
+        setHoveredPlaylistId(null);
+      });
+    } else {
+      setHoveredPlaylistId(null);
+    }
+
+    requestAnimationFrame(() => {
+      setDraggedTrack(null);
+      setDragPosition(null);
+    });
+  }, [
+    addActiveTrackToPlaylist,
+    hoveredPlaylistId,
+    isDraggingTrack,
+    setDragPosition,
+    setDraggedTrack,
+    setHoveredPlaylistId,
+  ]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+
+    const node = trackInfoRef.current as unknown as HTMLElement | null;
+    if (!node) return;
+
+    const handleMouseDown = (event: MouseEvent) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+
+      const startX = event.pageX;
+      const startY = event.pageY;
+      let hasStartedDrag = false;
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const deltaX = Math.abs(moveEvent.pageX - startX);
+        const deltaY = Math.abs(moveEvent.pageY - startY);
+
+        if (!hasStartedDrag && (deltaX > 4 || deltaY > 4)) {
+          hasStartedDrag = true;
+          handleTrackDragStart(moveEvent);
+        }
+
+        if (hasStartedDrag) {
+          handleTrackDragMove(moveEvent);
+        }
+      };
+
+      const handleMouseUp = (upEvent: MouseEvent) => {
+        if (hasStartedDrag) {
+          handleTrackDragMove(upEvent);
+          handleTrackDragEnd();
+        }
+
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    };
+
+    node.addEventListener('mousedown', handleMouseDown);
+
+    return () => {
+      node.removeEventListener('mousedown', handleMouseDown);
+    };
+  }, [handleTrackDragEnd, handleTrackDragMove, handleTrackDragStart]);
+
+  useEffect(() => {
+    if (visible) return;
+
+    setIsDraggingTrack(false);
+    setDraggedTrack(null);
+    setDragPosition(null);
+    setHoveredPlaylistId(null);
+    dropProcessingRef.current = false;
+  }, [visible, setDragPosition, setDraggedTrack, setHoveredPlaylistId]);
+
   if (!activeTrack) return null;
+
+  const webDragStyles: ViewStyle | null = Platform.OS === 'web'
+    ? ({
+        cursor: isDraggingTrack ? 'grabbing' : 'grab',
+        userSelect: 'none',
+      } as unknown as ViewStyle)
+    : null;
+
+  const trackInfoContent = (
+    <Animated.View
+      ref={trackInfoRef}
+      style={[
+        styles.trackInfo,
+        isDraggingTrack && styles.trackInfoDragging,
+        webDragStyles,
+      ]}
+    >
+      <Text style={[styles.trackTitle, { color: tokens.colors.text }]} numberOfLines={1}>
+        {activeTrack.title}
+      </Text>
+      <Text style={[styles.artistName, { color: tokens.colors.subtleText }]} numberOfLines={1}>
+        {activeTrack.artist?.name ?? 'Unknown Artist'}
+      </Text>
+    </Animated.View>
+  );
 
   return (
     <Modal
@@ -169,14 +387,37 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
             </View>
 
             {/* Track Info */}
-            <View style={styles.trackInfo}>
-              <Text style={[styles.trackTitle, { color: tokens.colors.text }]} numberOfLines={1}>
-                {activeTrack.title}
-              </Text>
-              <Text style={[styles.artistName, { color: tokens.colors.subtleText }]} numberOfLines={1}>
-                {activeTrack.artist?.name ?? 'Unknown Artist'}
-              </Text>
-            </View>
+            {Platform.OS === 'web' ? (
+              trackInfoContent
+            ) : (
+              <LongPressGestureHandler
+                minDurationMs={300}
+                onHandlerStateChange={(event) => {
+                  if (event.nativeEvent.state === State.ACTIVE) {
+                    handleTrackDragStart(event);
+                  }
+                }}
+              >
+                <PanGestureHandler
+                  enabled={isDraggingTrack}
+                  onGestureEvent={(event) => {
+                    handleTrackDragMove(event);
+                  }}
+                  onHandlerStateChange={(event) => {
+                    if (
+                      event.nativeEvent.state === State.END ||
+                      event.nativeEvent.state === State.CANCELLED ||
+                      event.nativeEvent.state === State.FAILED
+                    ) {
+                      handleTrackDragMove(event);
+                      handleTrackDragEnd();
+                    }
+                  }}
+                >
+                  {trackInfoContent}
+                </PanGestureHandler>
+              </LongPressGestureHandler>
+            )}
 
             {/* Progress Bar */}
             <View style={styles.progressContainer} {...wheelProps as any}>
@@ -347,6 +588,9 @@ const styles = StyleSheet.create({
   artistName: {
     fontSize: 18,
     textAlign: 'center',
+  },
+  trackInfoDragging: {
+    opacity: 0.75,
   },
 
   // Progress
