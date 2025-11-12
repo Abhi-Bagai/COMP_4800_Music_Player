@@ -89,6 +89,10 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
   const [isDraggingTrack, setIsDraggingTrack] = useState(false);
   const dropProcessingRef = useRef(false);
 
+  /**
+   * Persist the currently playing track into the supplied playlist.  This helper is
+   * shared by both the drag-and-drop path and the manual playlist tap fallback.
+   */
   const addActiveTrackToPlaylist = useCallback(async (playlistId: string) => {
     if (!activeTrack || dropProcessingRef.current) return false;
 
@@ -230,6 +234,10 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
     setDragPosition({ x, y });
   }, [setDragPosition]);
 
+  /**
+   * Finalise the drag.  We prefer the live hovered playlist but fall back to the last
+   * observed playlist so small pointer jitters do not lose a drop.
+   */
   const handleTrackDragEnd = useCallback(() => {
     if (!isDraggingTrack) return;
 
@@ -262,6 +270,10 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
     resetLastHoveredPlaylistId,
   ]);
 
+  /**
+   * On the web we cannot rely on gesture handlers, so we wire the native DOM events
+   * directly to detect long drags on the track info block.
+   */
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
 
@@ -311,6 +323,10 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
     };
   }, [handleTrackDragEnd, handleTrackDragMove, handleTrackDragStart]);
 
+  /**
+   * Reset drag state every time the Now Playing sheet closes so stale overlays never
+   * bleed into the rest of the app.
+   */
   useEffect(() => {
     if (visible) return;
 

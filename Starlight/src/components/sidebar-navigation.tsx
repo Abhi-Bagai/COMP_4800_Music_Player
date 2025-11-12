@@ -293,6 +293,11 @@ interface SidebarPlaylistNavItemProps {
   onPress: (playlistId: string) => void;
 }
 
+/**
+ * Individual playlist entry inside the sidebar drop-down.  Each item registers its
+ * layout with the drag context so the library and now playing overlays can treat the
+ * sidebar as a first-class drop target.
+ */
 function SidebarPlaylistNavItem({
   playlist,
   level,
@@ -304,6 +309,10 @@ function SidebarPlaylistNavItem({
   const { registerDropZoneLayout, unregisterDropZoneLayout } = useDrag();
   const containerRef = useRef<View>(null);
 
+  /**
+   * Cache the playlist hit-box in global drag state so pointer math can avoid DOM
+   * queries on native platforms.
+   */
   const updateDropZoneLayout = useCallback(() => {
     const node = containerRef.current as any;
     if (node?.measureInWindow) {
@@ -317,6 +326,9 @@ function SidebarPlaylistNavItem({
     updateDropZoneLayout();
   }, [updateDropZoneLayout]);
 
+  /**
+   * Web needs to recompute when the window resizes because our layout transform changes.
+   */
   useEffect(() => {
     if (Platform.OS === "web") {
       const handleResize = () => updateDropZoneLayout();

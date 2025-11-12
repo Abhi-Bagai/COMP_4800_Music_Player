@@ -356,6 +356,10 @@ function TableRow({
 }: TableRowProps) {
   const { tokens } = useTheme();
   const { activeTrack, isPlaying } = usePlayerStore();
+  /**
+   * Global drag-and-drop wiring shared with the Now Playing sheet and sidebar.  Each
+   * row contributes pointer updates so the overlay can be rendered centrally.
+   */
   const {
     setDraggedTrack,
     setDragPosition,
@@ -417,6 +421,10 @@ function TableRow({
     }
   };
 
+  /**
+   * Begin a drag originating from the library table.  We immediately publish the track
+   * metadata so the overlay can mirror it on every screen.
+   */
   const handleDragStart = React.useCallback(
     (event: any) => {
       const { pageX, pageY } = event.nativeEvent;
@@ -432,6 +440,9 @@ function TableRow({
     [setDragPosition, setDraggedTrack, track.artist, track.id, track.title]
   );
 
+  /**
+   * Push the global pointer position so the DragOverlay can follow the cursor/finger.
+   */
   const handleDragUpdate = React.useCallback(
     (event: any) => {
       const { pageX, pageY } = event.nativeEvent;
@@ -441,6 +452,10 @@ function TableRow({
     [setDragPosition, track.id]
   );
 
+  /**
+   * Finish the drag.  We snapshot the target playlist before clearing the global drag
+   * state so the async playlist mutation can run without keeping the UI blocked.
+   */
   const handleDragEnd = React.useCallback(() => {
     if (!isDragging) return;
 
@@ -778,6 +793,10 @@ function TableRow({
     }
   }, [track.id, handleDragEnd, handleDragStart, handleDragUpdate]);
 
+  /**
+   * Web-only: install a global mouseup listener so a drop that finishes outside the row
+   * (e.g. on top of the sidebar) still triggers cleanup.
+   */
   React.useEffect(() => {
     if (Platform.OS !== "web" || typeof window === "undefined") return;
 

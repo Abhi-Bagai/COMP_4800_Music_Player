@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { Platform } from 'react-native';
 
+/**
+ * Public contract for the drag-and-drop context.  We expose only the pieces required
+ * by the library table, the Now Playing sheet, and the sidebar playlists so we can
+ * keep the implementation details hidden away in this module.
+ */
 interface DragContextType {
   draggedTrack: { id: string; title: string; artist?: { name: string } | null } | null;
   dragPosition: { x: number; y: number } | null;
@@ -14,6 +19,10 @@ interface DragContextType {
   unregisterDropZoneLayout: (id: string) => void;
 }
 
+/**
+ * Normalised geometry for a playlist drop target.  Coordinates are stored in
+ * window-space so both native and web callers can contribute hit boxes.
+ */
 interface DropZoneLayout {
   x: number;
   y: number;
@@ -30,6 +39,10 @@ export function DragProvider({ children }: { children: ReactNode }) {
   const [lastHoveredPlaylistId, setLastHoveredPlaylistId] = useState<string | null>(null);
   const [dropZoneLayouts, setDropZoneLayouts] = useState<Record<string, DropZoneLayout>>({});
 
+  /**
+   * Register or update the layout for a playlist drop-zone.  Called from the sidebar
+   * and any other surfaces that want to receive drops.
+   */
   const registerDropZoneLayout = useCallback((id: string, layout: DropZoneLayout) => {
     setDropZoneLayouts((prev) => ({
       ...prev,
@@ -37,6 +50,9 @@ export function DragProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  /**
+   * Remove a drop-zone once the playlist unmounts to avoid using stale geometry.
+   */
   const unregisterDropZoneLayout = useCallback((id: string) => {
     setDropZoneLayouts((prev) => {
       if (!prev[id]) return prev;
@@ -45,6 +61,10 @@ export function DragProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  /**
+   * Resolve which playlist (if any) the pointer currently overlaps.  Web builds get
+   * a fast DOM-based lookup while native uses the cached layout list.
+   */
   useEffect(() => {
     if (!draggedTrack || !dragPosition) {
       console.log('[DragContext] No drag active; clearing hover');
