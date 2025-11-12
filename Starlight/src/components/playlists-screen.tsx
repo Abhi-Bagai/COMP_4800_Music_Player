@@ -30,7 +30,7 @@ interface PlaylistsScreenProps {
 interface PlaylistItemProps {
   item: any;
   tokens: any;
-  hoveredPlaylistId: string | null;
+  hoveredTargetId: string | null;
   draggedTrack: any;
   onPlaylistPress: (playlistId: string) => void;
   onDeletePlaylist: (playlistId: string, playlistName: string) => void;
@@ -41,7 +41,7 @@ interface PlaylistItemProps {
 function PlaylistItem({
   item,
   tokens,
-  hoveredPlaylistId,
+  hoveredTargetId,
   draggedTrack,
   onPlaylistPress,
   onDeletePlaylist,
@@ -49,7 +49,7 @@ function PlaylistItem({
   setPlaylistRefs,
 }: PlaylistItemProps) {
   const playlistRef = React.useRef<View>(null);
-  const isHovered = hoveredPlaylistId === item.id;
+  const isHovered = hoveredTargetId === item.id;
 
   // Store ref for drag position checking
   React.useEffect(() => {
@@ -143,7 +143,7 @@ export function PlaylistsScreen({ onPlaylistPress }: PlaylistsScreenProps) {
   const { tokens } = useTheme();
   const { activeTrack } = usePlayerStore();
   const { playlists, isLoading } = usePlaylistStore();
-  const { draggedTrack, hoveredPlaylistId, setHoveredPlaylistId, setDraggedTrack, setDragPosition } = useDrag();
+  const { draggedTrack, hoveredTargetId, setHoveredTargetId, setDraggedTrack, setDragPosition } = useDrag();
   const [showNowPlaying, setShowNowPlaying] = useState(false);
   const [showPlaylistCreation, setShowPlaylistCreation] = useState(false);
   const [playlistRefs, setPlaylistRefs] = useState<Record<string, any>>({});
@@ -178,20 +178,20 @@ export function PlaylistsScreen({ onPlaylistPress }: PlaylistsScreenProps) {
           currentElement = currentElement.parentElement;
         }
 
-        if (playlistId && hoveredPlaylistId !== playlistId) {
-          setHoveredPlaylistId(playlistId);
-        } else if (!playlistId && hoveredPlaylistId) {
-          setHoveredPlaylistId(null);
+        if (playlistId && hoveredTargetId !== playlistId) {
+          setHoveredTargetId(playlistId);
+        } else if (!playlistId && hoveredTargetId) {
+          setHoveredTargetId(null);
         }
       }
     };
 
     const handleMouseUp = async () => {
       // Handle drop when mouse is released over a playlist
-      if (hoveredPlaylistId && draggedTrack) {
-        await handleDrop(hoveredPlaylistId);
+      if (hoveredTargetId && draggedTrack) {
+        await handleDrop(hoveredTargetId);
       }
-      setHoveredPlaylistId(null);
+      setHoveredTargetId(null);
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
@@ -203,7 +203,7 @@ export function PlaylistsScreen({ onPlaylistPress }: PlaylistsScreenProps) {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [draggedTrack, hoveredPlaylistId]);
+  }, [draggedTrack, hoveredTargetId]);
 
   const handleDrop = async (playlistId: string) => {
     if (!draggedTrack) return;
@@ -221,7 +221,7 @@ export function PlaylistsScreen({ onPlaylistPress }: PlaylistsScreenProps) {
       
       setDraggedTrack(null);
       setDragPosition(null);
-      setHoveredPlaylistId(null);
+      setHoveredTargetId(null);
 
       if (Platform.OS === 'web') {
         alert(`Added "${draggedTrack.title}" to playlist`);
@@ -345,7 +345,7 @@ export function PlaylistsScreen({ onPlaylistPress }: PlaylistsScreenProps) {
             <PlaylistItem
               item={item}
               tokens={tokens}
-              hoveredPlaylistId={hoveredPlaylistId}
+              hoveredTargetId={hoveredTargetId}
               draggedTrack={draggedTrack}
               onPlaylistPress={onPlaylistPress}
               onDeletePlaylist={handleDeletePlaylist}

@@ -1,50 +1,42 @@
-import { useEffect, useState, useMemo } from "react";
-import {
-  Alert,
-  FlatList,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
-import { PanGestureHandler, Swipeable } from "react-native-gesture-handler";
+import { useEffect, useState, useMemo } from 'react';
+import { Alert, FlatList, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { PanGestureHandler, Swipeable } from 'react-native-gesture-handler';
 import * as DocumentPicker from 'expo-document-picker';
 
-import { useTheme } from "@/src/theme/provider";
+import { useTheme } from '@/src/theme/provider';
 
-import { IconSymbol } from "@/components/ui/icon-symbol";
-import { AddToPlaylistModal } from "@/src/components/add-to-playlist-modal";
-import { AlbumsScreen } from "@/src/components/albums-screen";
-import { ArtistsScreen } from "@/src/components/artists-screen";
-import { PlaylistsScreen } from "@/src/components/playlists-screen";
-import { MiniPlayer } from "@/src/components/mini-player";
-import { NowPlaying } from "@/src/components/now-playing";
-import NowPlayingScreen from "./now-playing";
-import { PlaylistCreationModal } from "@/src/components/playlist-creation-modal";
-import { PlaylistDetailScreen } from "@/src/components/playlist-detail-screen";
-import { SidebarNavigation } from "@/src/components/sidebar-navigation";
-import { TableView } from "@/src/components/table-view";
-import { TagManager } from "@/src/components/tag-manager";
-import { DragOverlay } from "@/src/components/drag-overlay";
-import { Button } from "@/src/components/ui/button";
-import { DropdownMenu } from "@/src/components/ui/dropdown-menu";
-import { IconButton } from "@/src/components/ui/icon-button";
-import { Text } from "@/src/components/ui/text";
-import { StarlightLogo } from "@/src/components/starlight-logo";
-import { FileScanner } from "@/src/services/file-scanner";
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { AddToPlaylistModal } from '@/src/components/add-to-playlist-modal';
+import { AlbumsScreen } from '@/src/components/albums-screen';
+import { ArtistsScreen } from '@/src/components/artists-screen';
+import { PlaylistsScreen } from '@/src/components/playlists-screen';
+import { MiniPlayer } from '@/src/components/mini-player';
+import { NowPlaying } from '@/src/components/now-playing';
+import NowPlayingScreen from './now-playing';
+import { PlaylistCreationModal } from '@/src/components/playlist-creation-modal';
+import { SidebarNavigation } from '@/src/components/sidebar-navigation';
+import { TableView } from '@/src/components/table-view';
+import { TagManager } from '@/src/components/tag-manager';
+import { DragOverlay } from '@/src/components/drag-overlay';
+import { Button } from '@/src/components/ui/button';
+import { DropdownMenu } from '@/src/components/ui/dropdown-menu';
+import { IconButton } from '@/src/components/ui/icon-button';
+import { Text } from '@/src/components/ui/text';
+import { StarlightLogo } from '@/src/components/starlight-logo';
+import { FileScanner } from '@/src/services/file-scanner';
 import {
   clearLibrary,
   deleteTrack,
   hydrateLibraryFromDatabase,
-} from "@/src/services/library-service";
-import { getTrackTags, saveTrackTags, getAllTrackTags } from "@/src/services/tag-service";
-import { playTrack } from "@/src/services/playback-service";
+} from '@/src/services/library-service';
+import { getTrackTags, saveTrackTags, getAllTrackTags } from '@/src/services/tag-service';
+import { playTrack } from '@/src/services/playback-service';
 import {
   hydratePlaylistsFromDatabase,
   clearAllPlaylistsService,
-} from "@/src/services/playlist-service";
-import { useLibraryStore, usePlayerStore, usePlaylistStore } from "@/src/state";
+  getPlaylistDetails,
+} from '@/src/services/playlist-service';
+import { useLibraryStore, usePlayerStore, usePlaylistStore } from '@/src/state';
 
 export default function HomeScreen() {
   const { tokens } = useTheme();
@@ -55,21 +47,17 @@ export default function HomeScreen() {
   const [showPlaylistCreation, setShowPlaylistCreation] = useState(false);
   const [showAddToPlaylist, setShowAddToPlaylist] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState<any>(null);
-  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(
-    null
-  );
-  const [currentView, setCurrentView] = useState<
-    "library" | "artists" | "albums"
-  >("library");
-  const [sidebarView, setSidebarView] = useState<string>("library");
+  const [currentView, setCurrentView] = useState<'library' | 'artists' | 'albums'>('library');
+  const [sidebarView, setSidebarView] = useState<string>('library');
   const [showTagManager, setShowTagManager] = useState(false);
-  const [selectedTrackForTagging, setSelectedTrackForTagging] =
-    useState<any>(null);
+  const [selectedTrackForTagging, setSelectedTrackForTagging] = useState<any>(null);
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [showGearMenu, setShowGearMenu] = useState(false);
   const [showAddMusicMenu, setShowAddMusicMenu] = useState(false);
-  const [trackTags, setTrackTags] = useState<{[trackId: string]: string[]}>({});
-  const [searchText, setSearchText] = useState("");
+  const [trackTags, setTrackTags] = useState<{ [trackId: string]: string[] }>({});
+  const [searchText, setSearchText] = useState('');
+  const [playlistTrackIds, setPlaylistTrackIds] = useState<Set<string> | null>(null);
+  const [selectedPlaylistName, setSelectedPlaylistName] = useState<string | null>(null);
 
   useEffect(() => {
     hydrateLibraryFromDatabase();
@@ -86,21 +74,29 @@ export default function HomeScreen() {
     }
   };
 
-  // Filter tracks based on search text
+  // Filter tracks based on playlist selection and search text
   const filteredTracks = useMemo(() => {
-    if (!searchText.trim()) {
-      return tracks;
+    let filtered = tracks;
+
+    // First, filter by playlist if one is selected
+    if (playlistTrackIds) {
+      filtered = filtered.filter((track) => playlistTrackIds.has(track.id));
     }
-    
-    const searchLower = searchText.toLowerCase().trim();
-    return tracks.filter((track) => {
-      const titleMatch = track.title?.toLowerCase().includes(searchLower);
-      const artistMatch = track.artist?.name?.toLowerCase().includes(searchLower);
-      const albumMatch = track.album?.title?.toLowerCase().includes(searchLower);
-      
-      return titleMatch || artistMatch || albumMatch;
-    });
-  }, [tracks, searchText]);
+
+    // Then, filter by search text if provided
+    if (searchText.trim()) {
+      const searchLower = searchText.toLowerCase().trim();
+      filtered = filtered.filter((track) => {
+        const titleMatch = track.title?.toLowerCase().includes(searchLower);
+        const artistMatch = track.artist?.name?.toLowerCase().includes(searchLower);
+        const albumMatch = track.album?.title?.toLowerCase().includes(searchLower);
+
+        return titleMatch || artistMatch || albumMatch;
+      });
+    }
+
+    return filtered;
+  }, [tracks, playlistTrackIds, searchText]);
 
   const handlePickMusicFolders = () => {
     setShowAddMusicMenu(true);
@@ -111,7 +107,17 @@ export default function HomeScreen() {
       console.log('Starting file picker...');
 
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/m4a', 'audio/wav', 'audio/flac', 'audio/aac', 'audio/ogg', 'audio/*'],
+        type: [
+          'audio/mpeg',
+          'audio/mp3',
+          'audio/mp4',
+          'audio/m4a',
+          'audio/wav',
+          'audio/flac',
+          'audio/aac',
+          'audio/ogg',
+          'audio/*',
+        ],
         multiple: true,
         copyToCacheDirectory: true,
       });
@@ -141,7 +147,7 @@ export default function HomeScreen() {
           'Folder selection is not available on mobile platforms. Please select individual music files instead.',
           [
             { text: 'Cancel', style: 'cancel' },
-            { text: 'Select Files', onPress: handlePickFiles }
+            { text: 'Select Files', onPress: handlePickFiles },
           ]
         );
       }
@@ -168,19 +174,21 @@ export default function HomeScreen() {
 
         try {
           console.log('Selected folder with', files.length, 'files');
-          
+
           const fileArray = Array.from(files);
           const musicFiles = fileArray
-            .filter(file => {
+            .filter((file) => {
               const extension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-              return ['.mp3', '.m4a', '.mp4', '.flac', '.wav', '.aac', '.ogg', '.wma'].includes(extension);
+              return ['.mp3', '.m4a', '.mp4', '.flac', '.wav', '.aac', '.ogg', '.wma'].includes(
+                extension
+              );
             })
-            .map(file => ({
+            .map((file) => ({
               uri: URL.createObjectURL(file),
               name: file.name,
               size: file.size,
               modificationTime: file.lastModified,
-              file: file
+              file: file,
             }));
 
           if (musicFiles.length === 0) {
@@ -207,7 +215,7 @@ export default function HomeScreen() {
 
   const scanSelectedFiles = async (assets: any[]) => {
     console.log('Starting file scan with assets:', assets);
-    
+
     try {
       const scanner = new FileScanner(
         (progress) => {
@@ -235,7 +243,7 @@ export default function HomeScreen() {
         }
       );
 
-      const musicFiles = assets.map(asset => ({
+      const musicFiles = assets.map((asset) => ({
         uri: asset.uri,
         name: asset.name || 'Unknown',
         size: asset.size || 0,
@@ -244,10 +252,13 @@ export default function HomeScreen() {
 
       console.log('Converted music files:', musicFiles);
       await scanner.processMusicFiles(musicFiles);
-      
+
       console.log('File processing completed');
       hydrateLibraryFromDatabase();
-      Alert.alert('Success', `Found ${musicFiles.length} music file(s)! Files have been added to your library.`);
+      Alert.alert(
+        'Success',
+        `Found ${musicFiles.length} music file(s)! Files have been added to your library.`
+      );
     } catch (error) {
       console.error('Error in scanSelectedFiles:', error);
       Alert.alert('Error', 'Failed to process music files. Please try again.');
@@ -255,44 +266,38 @@ export default function HomeScreen() {
   };
 
   const handleDeleteTrack = (track: any) => {
-    console.log("Delete button pressed for track:", track.title);
+    console.log('Delete button pressed for track:', track.title);
 
-    if (Platform.OS === "web") {
+    if (Platform.OS === 'web') {
       // Use browser confirm for web
-      const confirmed = window.confirm(
-        `Are you sure you want to delete "${track.title}"?`
-      );
+      const confirmed = window.confirm(`Are you sure you want to delete "${track.title}"?`);
       if (confirmed) {
         deleteTrackNow(track);
       }
       return;
     }
 
-    Alert.alert(
-      "Delete Track",
-      `Are you sure you want to delete "${track.title}"?`,
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => deleteTrackNow(track),
-        },
-      ]
-    );
+    Alert.alert('Delete Track', `Are you sure you want to delete "${track.title}"?`, [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => deleteTrackNow(track),
+      },
+    ]);
   };
 
   const deleteTrackNow = async (track: any) => {
     try {
-      console.log("Deleting track:", track.id);
+      console.log('Deleting track:', track.id);
       await deleteTrack(track.id);
-      console.log("Track deleted successfully");
+      console.log('Track deleted successfully');
     } catch (error) {
-      console.error("Error deleting track:", error);
-      Alert.alert("Error", "Failed to delete track");
+      console.error('Error deleting track:', error);
+      Alert.alert('Error', 'Failed to delete track');
     }
   };
 
@@ -301,18 +306,30 @@ export default function HomeScreen() {
     setShowAddToPlaylist(true);
   };
 
-  const handlePlaylistPress = (playlistId: string) => {
-    setSelectedPlaylistId(playlistId);
+  const handlePlaylistPress = async (playlistId: string) => {
+    try {
+      const playlist = await getPlaylistDetails(playlistId);
+      if (playlist) {
+        // Extract track IDs from the playlist
+        const trackIds = new Set(playlist.tracks.map((pt) => pt.track.id));
+        setPlaylistTrackIds(trackIds);
+        setSelectedPlaylistName(playlist.name);
+        setSidebarView('library'); // Make sure we're showing the library view
+      }
+    } catch (error) {
+      console.error('Error loading playlist:', error);
+      Alert.alert('Error', 'Failed to load playlist');
+    }
   };
 
   const handleClearLibrary = async () => {
-    console.log("handleClearLibrary called");
+    console.log('handleClearLibrary called');
     // Web Alert has only one button, so use confirm dialog instead
-    if (Platform.OS === "web") {
+    if (Platform.OS === 'web') {
       const confirmed =
-        typeof window !== "undefined" && typeof window.confirm === "function"
+        typeof window !== 'undefined' && typeof window.confirm === 'function'
           ? window.confirm(
-              "Are you sure you want to delete ALL tracks from your library? This cannot be undone."
+              'Are you sure you want to delete ALL tracks from your library? This cannot be undone.'
             )
           : true;
       if (!confirmed) return;
@@ -320,30 +337,30 @@ export default function HomeScreen() {
         // Clear UI immediately, then clear DB and rehydrate
         useLibraryStore.getState().setTracks([]);
         await clearLibrary();
-        Alert.alert("Success", "Library cleared successfully");
+        Alert.alert('Success', 'Library cleared successfully');
       } catch (error) {
-        console.error("Error clearing library:", error);
-        Alert.alert("Error", "Failed to clear library");
+        console.error('Error clearing library:', error);
+        Alert.alert('Error', 'Failed to clear library');
       }
       return;
     }
 
     Alert.alert(
-      "Clear Library",
-      "Are you sure you want to delete ALL tracks from your library? This cannot be undone.",
+      'Clear Library',
+      'Are you sure you want to delete ALL tracks from your library? This cannot be undone.',
       [
-        { text: "Cancel", style: "cancel" },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: "Clear All",
-          style: "destructive",
+          text: 'Clear All',
+          style: 'destructive',
           onPress: async () => {
             try {
               useLibraryStore.getState().setTracks([]);
               await clearLibrary();
-              Alert.alert("Success", "Library cleared successfully");
+              Alert.alert('Success', 'Library cleared successfully');
             } catch (error) {
-              console.error("Error clearing library:", error);
-              Alert.alert("Error", "Failed to clear library");
+              console.error('Error clearing library:', error);
+              Alert.alert('Error', 'Failed to clear library');
             }
           },
         },
@@ -352,41 +369,39 @@ export default function HomeScreen() {
   };
 
   const handleClearAllPlaylists = async () => {
-    console.log("handleClearAllPlaylists called");
+    console.log('handleClearAllPlaylists called');
     // Web Alert has only one button, so use confirm dialog instead
-    if (Platform.OS === "web") {
+    if (Platform.OS === 'web') {
       const confirmed =
-        typeof window !== "undefined" && typeof window.confirm === "function"
-          ? window.confirm(
-              "Are you sure you want to delete ALL playlists? This cannot be undone."
-            )
+        typeof window !== 'undefined' && typeof window.confirm === 'function'
+          ? window.confirm('Are you sure you want to delete ALL playlists? This cannot be undone.')
           : true;
       if (!confirmed) return;
       try {
         await clearAllPlaylistsService();
-        Alert.alert("Success", "All playlists cleared successfully");
+        Alert.alert('Success', 'All playlists cleared successfully');
       } catch (error) {
-        console.error("Error clearing playlists:", error);
-        Alert.alert("Error", "Failed to clear playlists");
+        console.error('Error clearing playlists:', error);
+        Alert.alert('Error', 'Failed to clear playlists');
       }
       return;
     }
 
     Alert.alert(
-      "Clear All Playlists",
-      "Are you sure you want to delete ALL playlists? This cannot be undone.",
+      'Clear All Playlists',
+      'Are you sure you want to delete ALL playlists? This cannot be undone.',
       [
-        { text: "Cancel", style: "cancel" },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: "Clear All",
-          style: "destructive",
+          text: 'Clear All',
+          style: 'destructive',
           onPress: async () => {
             try {
               await clearAllPlaylistsService();
-              Alert.alert("Success", "All playlists cleared successfully");
+              Alert.alert('Success', 'All playlists cleared successfully');
             } catch (error) {
-              console.error("Error clearing playlists:", error);
-              Alert.alert("Error", "Failed to clear playlists");
+              console.error('Error clearing playlists:', error);
+              Alert.alert('Error', 'Failed to clear playlists');
             }
           },
         },
@@ -394,62 +409,48 @@ export default function HomeScreen() {
     );
   };
 
+  // Clear playlist filter when clicking Library in sidebar
+  const handleViewChange = (view: string) => {
+    if (view === 'library' && playlistTrackIds) {
+      setPlaylistTrackIds(null);
+      setSelectedPlaylistName(null);
+    }
+    setSidebarView(view);
+  };
 
-  if (selectedPlaylistId) {
-    return (
-      <PlaylistDetailScreen
-        playlistId={selectedPlaylistId}
-        onBack={() => setSelectedPlaylistId(null)}
-        onPlaylistDeleted={() => {
-          setSelectedPlaylistId(null);
-          hydratePlaylistsFromDatabase();
-        }}
-      />
-    );
+  if (currentView === 'artists') {
+    return <ArtistsScreen onBack={() => setCurrentView('library')} />;
   }
 
-  if (currentView === "artists") {
-    return <ArtistsScreen onBack={() => setCurrentView("library")} />;
-  }
-
-  if (currentView === "albums") {
-    return <AlbumsScreen onBack={() => setCurrentView("library")} />;
+  if (currentView === 'albums') {
+    return <AlbumsScreen onBack={() => setCurrentView('library')} />;
   }
 
   return (
     <View style={[styles.container, { backgroundColor: tokens.colors.background }]}>
       {/* Desktop-style Header */}
-      <View style={[styles.header, { 
-        backgroundColor: tokens.colors.surface,
-        borderBottomColor: tokens.colors.background 
-      }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: tokens.colors.surface,
+            borderBottomColor: tokens.colors.background,
+          },
+        ]}>
         <View style={styles.headerCenter}>
-          <StarlightLogo
-            width={130}
-            height={25}
-            color={tokens.colors.primary}
-          />
+          <StarlightLogo width={130} height={25} color={tokens.colors.primary} />
         </View>
         <View style={styles.headerRight}>
           <Button
             size="sm"
             variant="primary"
-            className="flex-row items-center px-3 py-1.5 rounded-md gap-1.5"
-            onPress={handlePickMusicFolders}
-          >
-            <IconSymbol
-              name="plus"
-              size={16}
-              color={tokens.colors.onPrimary}
-            />
-            <Text className="text-primary-foreground text-xs font-semibold">
-              Add Music
-            </Text>
+            className="flex-row items-center gap-1.5 rounded-md px-3 py-1.5"
+            onPress={handlePickMusicFolders}>
+            <IconSymbol name="plus" size={16} color={tokens.colors.onPrimary} />
+            <Text>Add Music</Text>
           </Button>
           <IconButton
-            icon={
-              <IconSymbol name="gear" size={24} color={tokens.colors.text} />
-            }
+            icon={<IconSymbol name="gear" size={24} color={tokens.colors.text} />}
             accessibilityLabel="Settings"
             onPress={() => {
               setShowGearMenu(true);
@@ -463,9 +464,10 @@ export default function HomeScreen() {
         {/* Sidebar */}
         <View style={{ width: sidebarWidth }}>
           <SidebarNavigation
-            onViewChange={setSidebarView}
+            onViewChange={handleViewChange}
             currentView={sidebarView}
             onSearchChange={setSearchText}
+            onPlaylistPress={handlePlaylistPress}
           />
         </View>
 
@@ -476,93 +478,119 @@ export default function HomeScreen() {
             if (newWidth > 200 && newWidth < 1000) {
               setSidebarWidth(newWidth);
             }
-          }}
-        >
+          }}>
           <View style={[styles.divider, { backgroundColor: tokens.colors.background }]} />
         </PanGestureHandler>
 
         {/* Content Area */}
         <View style={[styles.contentArea, { backgroundColor: tokens.colors.background }]}>
-          {sidebarView === "library" ? (
-            tracks.length > 0 ? (
-              <TableView
-                tracks={filteredTracks.map((track) => ({
-                  id: track.id,
-                  title: track.title,
-                  artist: track.artist,
-                  album: track.album,
-                  durationMs: track.durationMs,
-                  genre: "Dubstep", // Mock genre for now
-                  bpm: 140, // Mock BPM for now
-                  tags: trackTags[track.id] || [], // Get stored tags for this track
-                }))}
-                onTrackPress={(track) =>
-                  playTrack(tracks.find((t) => t.id === track.id)!)
-                }
-                onTrackDelete={(track) =>
-                  handleDeleteTrack(tracks.find((t) => t.id === track.id)!)
-                }
-                onTrackAddToPlaylist={(track) =>
-                  handleAddToPlaylist(tracks.find((t) => t.id === track.id)!)
-                }
-                onTrackShowPlaylists={(track) => {
-                  // TODO: Implement show playlists functionality
-                  console.log("Show playlists for track:", track.title);
-                }}
-                onTrackTag={(track) => {
-                  const actualTrack = tracks.find((t) => t.id === track.id);
-                  if (actualTrack) {
-                    setSelectedTrackForTagging(actualTrack);
-                    setShowTagManager(true);
-                  }
-                }}
-                onBulkDelete={(tracks) => {
-                  console.log(
-                    "Bulk delete tracks:",
-                    tracks.map((t) => t.title)
-                  );
-                  // TODO: Implement bulk delete functionality
-                }}
-                onBulkAddToPlaylist={(tracks) => {
-                  console.log(
-                    "Bulk add to playlist tracks:",
-                    tracks.map((t) => t.title)
-                  );
-                  // TODO: Implement bulk add to playlist functionality
-                }}
-              />
-            ) : (
-              <View style={styles.emptyState}>
-                <View style={[styles.emptyStateIcon, { backgroundColor: tokens.colors.surface }]}>
-                  <IconSymbol
-                    name="music.note.list"
-                    size={48}
-                    color={tokens.colors.subtleText}
-                  />
+          {sidebarView === 'library' ? (
+            <>
+              {/* Playlist Filter Header */}
+              {selectedPlaylistName && (
+                <View
+                  style={[
+                    styles.playlistFilterHeader,
+                    {
+                      backgroundColor: tokens.colors.surface,
+                      borderBottomColor: tokens.colors.border,
+                    },
+                  ]}>
+                  <View style={styles.playlistFilterContent}>
+                    <View style={styles.playlistFilterInfo}>
+                      <IconSymbol name="music.note.list" size={20} color={tokens.colors.text} />
+                      <Text style={[styles.playlistFilterTitle, { color: tokens.colors.text }]}>
+                        {selectedPlaylistName}
+                      </Text>
+                      <Text
+                        style={[styles.playlistFilterCount, { color: tokens.colors.subtleText }]}>
+                        {filteredTracks.length} track{filteredTracks.length !== 1 ? 's' : ''}
+                      </Text>
+                    </View>
+                    <IconButton
+                      icon={
+                        <IconSymbol name="xmark.circle.fill" size={20} color={tokens.colors.text} />
+                      }
+                      accessibilityLabel="Clear filter"
+                      onPress={() => {
+                        setPlaylistTrackIds(null);
+                        setSelectedPlaylistName(null);
+                      }}
+                    />
+                  </View>
                 </View>
-                <Text style={[styles.emptyStateTitle, { color: tokens.colors.text }]}>
-                  Your Music Lives Here
-                </Text>
-                <Text style={[styles.emptyStateSubtitle, { color: tokens.colors.subtleText }]}>
-                  Add your favorite songs and albums to get started
-                </Text>
-                <Button
-                  onPress={handlePickMusicFolders}
-                  className="px-8"
-                >
-                  Add Music
-                </Button>
-              </View>
-            )
-          ) : sidebarView === "now-playing" ? (
+              )}
+              {filteredTracks.length > 0 ? (
+                <TableView
+                  tracks={filteredTracks.map((track) => ({
+                    id: track.id,
+                    title: track.title,
+                    artist: track.artist,
+                    album: track.album,
+                    durationMs: track.durationMs,
+                    genre: 'Dubstep', // Mock genre for now
+                    bpm: 140, // Mock BPM for now
+                    tags: trackTags[track.id] || [], // Get stored tags for this track
+                  }))}
+                  onTrackPress={(track) => playTrack(tracks.find((t) => t.id === track.id)!)}
+                  onTrackDelete={(track) =>
+                    handleDeleteTrack(tracks.find((t) => t.id === track.id)!)
+                  }
+                  onTrackAddToPlaylist={(track) =>
+                    handleAddToPlaylist(tracks.find((t) => t.id === track.id)!)
+                  }
+                  onTrackShowPlaylists={(track) => {
+                    // TODO: Implement show playlists functionality
+                    console.log('Show playlists for track:', track.title);
+                  }}
+                  onTrackTag={(track) => {
+                    const actualTrack = tracks.find((t) => t.id === track.id);
+                    if (actualTrack) {
+                      setSelectedTrackForTagging(actualTrack);
+                      setShowTagManager(true);
+                    }
+                  }}
+                  onBulkDelete={(tracks) => {
+                    console.log(
+                      'Bulk delete tracks:',
+                      tracks.map((t) => t.title)
+                    );
+                    // TODO: Implement bulk delete functionality
+                  }}
+                  onBulkAddToPlaylist={(tracks) => {
+                    console.log(
+                      'Bulk add to playlist tracks:',
+                      tracks.map((t) => t.title)
+                    );
+                    // TODO: Implement bulk add to playlist functionality
+                  }}
+                />
+              ) : (
+                <View style={styles.emptyState}>
+                  <View style={[styles.emptyStateIcon, { backgroundColor: tokens.colors.surface }]}>
+                    <IconSymbol name="music.note.list" size={48} color={tokens.colors.subtleText} />
+                  </View>
+                  <Text style={[styles.emptyStateTitle, { color: tokens.colors.text }]}>
+                    Your Music Lives Here
+                  </Text>
+                  <Text style={[styles.emptyStateSubtitle, { color: tokens.colors.subtleText }]}>
+                    Add your favorite songs and albums to get started
+                  </Text>
+                  <Button onPress={handlePickMusicFolders} className="px-8">
+                    Add Music
+                  </Button>
+                </View>
+              )}
+            </>
+          ) : sidebarView === 'now-playing' ? (
             <NowPlayingScreen />
-          ) : sidebarView === "artists" ? (
-            <ArtistsScreen onBack={() => setSidebarView("library")} />
-          ) : sidebarView === "albums" ? (
-            <AlbumsScreen onBack={() => setSidebarView("library")} />
-          ) : sidebarView === "playlists" ? (
+          ) : sidebarView === 'artists' ? (
+            <ArtistsScreen onBack={() => setSidebarView('library')} />
+          ) : sidebarView === 'albums' ? (
+            <AlbumsScreen onBack={() => setSidebarView('library')} />
+          ) : sidebarView === 'playlists' ? (
             <PlaylistsScreen onPlaylistPress={handlePlaylistPress} />
-          ) : sidebarView === "genres" ? (
+          ) : sidebarView === 'genres' ? (
             <View style={styles.placeholderView}>
               <Text style={[styles.placeholderText, { color: tokens.colors.text }]}>
                 Genres view coming soon...
@@ -593,10 +621,7 @@ export default function HomeScreen() {
       )}
 
       {/* Now Playing Modal */}
-      <NowPlaying
-        visible={showNowPlaying}
-        onClose={() => setShowNowPlaying(false)}
-      />
+      <NowPlaying visible={showNowPlaying} onClose={() => setShowNowPlaying(false)} />
 
       {/* Playlist Creation Modal */}
       <PlaylistCreationModal
@@ -640,16 +665,16 @@ export default function HomeScreen() {
           setSelectedTrackForTagging(null);
         }}
         trackId={selectedTrackForTagging?.id}
-        currentTags={selectedTrackForTagging ? (trackTags[selectedTrackForTagging.id] || []) : []}
+        currentTags={selectedTrackForTagging ? trackTags[selectedTrackForTagging.id] || [] : []}
         onTagsUpdate={async (tags) => {
           if (selectedTrackForTagging) {
             try {
               await saveTrackTags(selectedTrackForTagging.id, tags);
-              setTrackTags(prev => ({
+              setTrackTags((prev) => ({
                 ...prev,
-                [selectedTrackForTagging.id]: tags
+                [selectedTrackForTagging.id]: tags,
               }));
-              console.log("Tags updated for track:", selectedTrackForTagging.id, tags);
+              console.log('Tags updated for track:', selectedTrackForTagging.id, tags);
             } catch (error) {
               console.error('Error saving tags:', error);
             }
@@ -662,34 +687,29 @@ export default function HomeScreen() {
         visible={showGearMenu}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowGearMenu(false)}
-      >
+        onRequestClose={() => setShowGearMenu(false)}>
         <Pressable
           style={[styles.modalBackdrop, { backgroundColor: 'rgba(0,0,0,0.1)' }]}
-          onPress={() => setShowGearMenu(false)}
-        >
-          <View style={[styles.modalMenu, { 
-            backgroundColor: tokens.colors.surface,
-            borderColor: tokens.colors.border 
-          }]}>
+          onPress={() => setShowGearMenu(false)}>
+          <View
+            style={[
+              styles.modalMenu,
+              {
+                backgroundColor: tokens.colors.surface,
+                borderColor: tokens.colors.border,
+              },
+            ]}>
             <Pressable
               style={[styles.menuItem, { borderBottomColor: tokens.colors.background }]}
               onPress={() => {
                 setShowGearMenu(false);
                 handleClearLibrary();
-              }}
-            >
+              }}>
               <View className="flex-row items-center">
-                <View className="w-5 items-center mr-3">
-                  <IconSymbol
-                    name="trash"
-                    size={16}
-                    color={tokens.colors.danger}
-                  />
+                <View className="mr-3 w-5 items-center">
+                  <IconSymbol name="trash" size={16} color={tokens.colors.danger} />
                 </View>
-                <Text className="text-destructive text-sm font-medium">
-                  Delete All Songs
-                </Text>
+                <Text className="text-sm font-medium text-destructive">Delete All Songs</Text>
               </View>
             </Pressable>
             <Pressable
@@ -697,19 +717,12 @@ export default function HomeScreen() {
               onPress={() => {
                 setShowGearMenu(false);
                 handleClearAllPlaylists();
-              }}
-            >
+              }}>
               <View className="flex-row items-center">
-                <View className="w-5 items-center mr-3">
-                  <IconSymbol
-                    name="trash"
-                    size={16}
-                    color={tokens.colors.danger}
-                  />
+                <View className="mr-3 w-5 items-center">
+                  <IconSymbol name="trash" size={16} color={tokens.colors.danger} />
                 </View>
-                <Text className="text-destructive text-sm font-medium">
-                  Delete All Playlists
-                </Text>
+                <Text className="text-sm font-medium text-destructive">Delete All Playlists</Text>
               </View>
             </Pressable>
           </View>
@@ -721,53 +734,45 @@ export default function HomeScreen() {
         visible={showAddMusicMenu}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowAddMusicMenu(false)}
-      >
+        onRequestClose={() => setShowAddMusicMenu(false)}>
         <Pressable
           style={[styles.modalBackdrop, { backgroundColor: 'rgba(0,0,0,0.1)' }]}
-          onPress={() => setShowAddMusicMenu(false)}
-        >
-          <View style={[styles.modalMenu, { 
-            backgroundColor: tokens.colors.surface,
-            borderColor: tokens.colors.border 
-          }]}>
+          onPress={() => setShowAddMusicMenu(false)}>
+          <View
+            style={[
+              styles.modalMenu,
+              {
+                backgroundColor: tokens.colors.surface,
+                borderColor: tokens.colors.border,
+              },
+            ]}>
             <Pressable
               style={[styles.menuItem, { borderBottomColor: tokens.colors.background }]}
               onPress={() => {
                 setShowAddMusicMenu(false);
                 handlePickFolder();
-              }}
-            >
+              }}>
               <View className="flex-row items-center">
-                <View className="w-5 items-center mr-3">
-                  <IconSymbol
-                    name="folder"
-                    size={16}
-                    color={tokens.colors.text}
-                  />
+                <View className="mr-3 w-5 items-center">
+                  <IconSymbol name="folder" size={16} color={tokens.colors.text} />
                 </View>
-                <Text className="text-foreground text-sm font-medium">
+                <Text className="text-sm font-medium text-foreground">
                   {Platform.OS === 'web' ? 'Select Music Folder' : 'Select Music Files'}
                 </Text>
               </View>
             </Pressable>
             {Platform.OS === 'web' && (
-            <Pressable
-              style={styles.menuItem}
-              onPress={() => {
-                setShowAddMusicMenu(false);
-                handlePickFiles();
-              }}
-            >
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => {
+                  setShowAddMusicMenu(false);
+                  handlePickFiles();
+                }}>
                 <View className="flex-row items-center">
-                  <View className="w-5 items-center mr-3">
-                    <IconSymbol
-                      name="music.note"
-                      size={16}
-                      color={tokens.colors.text}
-                    />
+                  <View className="mr-3 w-5 items-center">
+                    <IconSymbol name="music.note" size={16} color={tokens.colors.text} />
                   </View>
-                  <Text className="text-foreground text-sm font-medium">
+                  <Text className="text-sm font-medium text-foreground">
                     Select Individual Files
                   </Text>
                 </View>
@@ -882,14 +887,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderBottomWidth: 1,
   },
+  playlistFilterHeader: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+  },
+  playlistFilterContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  playlistFilterInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  playlistFilterTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  playlistFilterCount: {
+    fontSize: 14,
+    marginLeft: 4,
+  },
 });
 
 function formatTrackDuration(duration?: number | null) {
-  if (!duration) return "";
+  if (!duration) return '';
   const totalSeconds = Math.floor(duration / 1000);
   const minutes = Math.floor(totalSeconds / 60)
     .toString()
-    .padStart(2, "0");
-  const seconds = (totalSeconds % 60).toString().padStart(2, "0");
+    .padStart(2, '0');
+  const seconds = (totalSeconds % 60).toString().padStart(2, '0');
   return `${minutes}:${seconds}`;
 }

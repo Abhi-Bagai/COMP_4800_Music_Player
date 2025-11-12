@@ -1,21 +1,13 @@
-import React from "react";
-import {
-  FlatList,
-  Pressable,
-  StyleSheet,
-  View,
-  Modal,
-  Platform,
-  ScrollView,
-} from "react-native";
-import { PanGestureHandler, LongPressGestureHandler, State } from "react-native-gesture-handler";
+import React from 'react';
+import { FlatList, Pressable, StyleSheet, View, Modal, Platform, ScrollView } from 'react-native';
+import { PanGestureHandler, LongPressGestureHandler, State } from 'react-native-gesture-handler';
 
-import { IconSymbol } from "@/components/ui/icon-symbol";
-import { IconButton } from "@/src/components/ui/icon-button";
-import { Text } from "@/src/components/ui/text";
-import { useTheme } from "@/src/theme/provider";
-import { usePlayerStore } from "@/src/state";
-import { useDrag } from "@/src/contexts/drag-context";
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { IconButton } from '@/src/components/ui/icon-button';
+import { Text } from '@/src/components/ui/text';
+import { useTheme } from '@/src/theme/provider';
+import { usePlayerStore } from '@/src/state';
+import { useTrackDragSource } from '@/src/hooks/use-track-dnd';
 
 interface Track {
   id: string;
@@ -48,7 +40,7 @@ interface ColumnConfig {
 interface TableHeaderProps {
   onSort?: (column: string) => void;
   sortColumn?: string;
-  sortDirection?: "asc" | "desc";
+  sortDirection?: 'asc' | 'desc';
   columns: ColumnConfig[];
   onColumnResize: (columnKey: string, newWidth: number) => void;
   selectedTracks: Set<string>;
@@ -76,38 +68,25 @@ function TableHeader({
           backgroundColor: tokens.colors.surface,
           borderBottomColor: tokens.colors.background,
         },
-      ]}
-    >
+      ]}>
       {columns.map((column, index) => {
-        const isAllSelected =
-          selectedTracks.size === allTracks.length && allTracks.length > 0;
-        const isIndeterminate =
-          selectedTracks.size > 0 && selectedTracks.size < allTracks.length;
+        const isAllSelected = selectedTracks.size === allTracks.length && allTracks.length > 0;
+        const isIndeterminate = selectedTracks.size > 0 && selectedTracks.size < allTracks.length;
 
         return (
           <View key={column.key} style={styles.headerCellContainer}>
-            {column.key === "select" ? (
-              <Pressable
-                style={[styles.headerCell, { width: column.width }]}
-                onPress={onSelectAll}
-              >
+            {column.key === 'select' ? (
+              <Pressable style={[styles.headerCell, { width: column.width }]} onPress={onSelectAll}>
                 <View
                   style={[
                     styles.checkboxBox,
                     {
-                      backgroundColor: isAllSelected
-                        ? tokens.colors.primary
-                        : "transparent",
+                      backgroundColor: isAllSelected ? tokens.colors.primary : 'transparent',
                       borderColor: tokens.colors.border,
                     },
-                  ]}
-                >
+                  ]}>
                   {isAllSelected && (
-                    <IconSymbol
-                      name="checkmark"
-                      size={12}
-                      color={tokens.colors.onPrimary}
-                    />
+                    <IconSymbol name="checkmark" size={12} color={tokens.colors.onPrimary} />
                   )}
                   {isIndeterminate && (
                     <View
@@ -122,18 +101,13 @@ function TableHeader({
             ) : (
               <Pressable
                 style={[styles.headerCell, { width: column.width }]}
-                onPress={() => onSort?.(column.key)}
-              >
-                <Text
-                  style={[styles.headerText, { color: tokens.colors.text }]}
-                >
+                onPress={() => onSort?.(column.key)}>
+                <Text style={[styles.headerText, { color: tokens.colors.text }]}>
                   {column.label}
                 </Text>
                 {sortColumn === column.key && (
                   <IconSymbol
-                    name={
-                      sortDirection === "asc" ? "chevron.up" : "chevron.down"
-                    }
+                    name={sortDirection === 'asc' ? 'chevron.up' : 'chevron.down'}
                     size={12}
                     color={tokens.colors.primary}
                   />
@@ -143,26 +117,14 @@ function TableHeader({
             {index < columns.length - 1 && (
               <>
                 <View
-                  style={[
-                    styles.columnDivider,
-                    { backgroundColor: tokens.colors.background },
-                  ]}
+                  style={[styles.columnDivider, { backgroundColor: tokens.colors.background }]}
                 />
                 <PanGestureHandler
                   onGestureEvent={(event) => {
-                    const newWidth = Math.max(
-                      40,
-                      column.width + event.nativeEvent.translationX
-                    );
+                    const newWidth = Math.max(40, column.width + event.nativeEvent.translationX);
                     onColumnResize(column.key, newWidth);
-                  }}
-                >
-                  <View
-                    style={[
-                      styles.resizeHandle,
-                      { backgroundColor: 'transparent' },
-                    ]}
-                  />
+                  }}>
+                  <View style={[styles.resizeHandle, { backgroundColor: 'transparent' }]} />
                 </PanGestureHandler>
               </>
             )}
@@ -224,8 +186,8 @@ function ContextMenu({
 
   const menuItems = [
     {
-      label: "Play",
-      icon: "play.fill",
+      label: 'Play',
+      icon: 'play.fill',
       onPress: () => {
         onPlay(currentTrack);
         onClose();
@@ -235,8 +197,8 @@ function ContextMenu({
     {
       label: hasMultipleSelected
         ? `Add ${selectedTracks.length} tracks to Playlists`
-        : "Add to Playlists",
-      icon: "plus.circle",
+        : 'Add to Playlists',
+      icon: 'plus.circle',
       onPress: () => {
         if (hasMultipleSelected) {
           onBulkAddToPlaylist(selectedTracks);
@@ -247,8 +209,8 @@ function ContextMenu({
       },
     },
     {
-      label: "Tag Track",
-      icon: "tag",
+      label: 'Tag Track',
+      icon: 'tag',
       onPress: () => {
         onTagTrack(currentTrack);
         onClose();
@@ -256,8 +218,8 @@ function ContextMenu({
       disabled: hasMultipleSelected,
     },
     {
-      label: "Show Playlists",
-      icon: "list.bullet",
+      label: 'Show Playlists',
+      icon: 'list.bullet',
       onPress: () => {
         onShowPlaylists(currentTrack);
         onClose();
@@ -265,10 +227,8 @@ function ContextMenu({
       disabled: hasMultipleSelected,
     },
     {
-      label: hasMultipleSelected
-        ? `Delete ${selectedTracks.length} tracks`
-        : "Delete",
-      icon: "trash",
+      label: hasMultipleSelected ? `Delete ${selectedTracks.length} tracks` : 'Delete',
+      icon: 'trash',
       onPress: () => {
         if (hasMultipleSelected) {
           onBulkDelete(selectedTracks);
@@ -282,12 +242,7 @@ function ContextMenu({
   ].filter((item) => !item.disabled);
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.contextMenuBackdrop} onPress={onClose}>
         <View
           style={[
@@ -298,8 +253,7 @@ function ContextMenu({
               left: position.x,
               top: position.y,
             },
-          ]}
-        >
+          ]}>
           {menuItems.map((item, index) => (
             <Pressable
               key={index}
@@ -310,26 +264,20 @@ function ContextMenu({
                   borderBottomWidth: 1,
                 },
               ]}
-              onPress={item.onPress}
-            >
+              onPress={item.onPress}>
               <View style={styles.contextMenuItemContent}>
                 <IconSymbol
                   name={item.icon as any}
                   size={16}
-                  color={
-                    item.destructive ? tokens.colors.danger : tokens.colors.text
-                  }
+                  color={item.destructive ? tokens.colors.danger : tokens.colors.text}
                 />
                 <Text
                   style={[
                     styles.contextMenuItemText,
                     {
-                      color: item.destructive
-                        ? tokens.colors.danger
-                        : tokens.colors.text,
+                      color: item.destructive ? tokens.colors.danger : tokens.colors.text,
                     },
-                  ]}
-                >
+                  ]}>
                   {item.label}
                 </Text>
               </View>
@@ -355,7 +303,11 @@ function TableRow({
 }: TableRowProps) {
   const { tokens } = useTheme();
   const { activeTrack, isPlaying } = usePlayerStore();
-  const { setDraggedTrack, setDragPosition } = useDrag();
+  const { startDrag, updateDragPosition, endDrag, applyWebDataTransfer } = useTrackDragSource({
+    id: track.id,
+    title: track.title,
+    artist: track.artist ?? null,
+  });
   const [isHovered, setIsHovered] = React.useState(false);
   const [isPressed, setIsPressed] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
@@ -366,16 +318,14 @@ function TableRow({
 
   const getSourceIcon = () => {
     // You can customize this based on track source
-    return (
-      <IconSymbol name="music.note" size={16} color={tokens.colors.primary} />
-    );
+    return <IconSymbol name="music.note" size={16} color={tokens.colors.primary} />;
   };
 
   const formatDuration = (durationMs?: number | null) => {
-    if (!durationMs) return "0:00";
+    if (!durationMs) return '0:00';
     const totalSeconds = Math.floor(durationMs / 1000);
     const minutes = Math.floor(totalSeconds / 60);
-    const seconds = (totalSeconds % 60).toString().padStart(2, "0");
+    const seconds = (totalSeconds % 60).toString().padStart(2, '0');
     return `${minutes}:${seconds}`;
   };
 
@@ -396,7 +346,7 @@ function TableRow({
 
   const handleContextMenu = (event: any) => {
     // Handle right-click context menu on web
-    if (Platform.OS === "web") {
+    if (Platform.OS === 'web') {
       event.preventDefault();
       const { pageX, pageY } = event.nativeEvent;
       onContextMenu(track, { x: pageX, y: pageY });
@@ -406,23 +356,17 @@ function TableRow({
   const handleDragStart = (event: any) => {
     const { pageX, pageY } = event.nativeEvent;
     setIsDragging(true);
-    setDraggedTrack({
-      id: track.id,
-      title: track.title,
-      artist: track.artist,
-    });
-    setDragPosition({ x: pageX, y: pageY });
+    startDrag(pageX, pageY);
   };
 
   const handleDragUpdate = (event: any) => {
     const { pageX, pageY } = event.nativeEvent;
-    setDragPosition({ x: pageX, y: pageY });
+    updateDragPosition(pageX, pageY);
   };
 
   const handleDragEnd = () => {
     setIsDragging(false);
-    setDraggedTrack(null);
-    setDragPosition(null);
+    endDrag();
   };
 
   const rowContent = (
@@ -433,12 +377,12 @@ function TableRow({
           backgroundColor: isCurrentlyPlaying
             ? tokens.colors.primary + '20' // Semi-transparent primary color for currently playing
             : isDragging
-            ? tokens.colors.primary + '30'
-            : isPressed 
-            ? tokens.colors.surfaceElevated 
-            : isHovered 
-            ? tokens.colors.surfaceElevated 
-            : tokens.colors.surface,
+              ? tokens.colors.primary + '30'
+              : isPressed
+                ? tokens.colors.surfaceElevated
+                : isHovered
+                  ? tokens.colors.surfaceElevated
+                  : tokens.colors.surface,
           borderBottomColor: tokens.colors.background,
           opacity: isDragging ? 0.5 : 1,
         },
@@ -448,155 +392,120 @@ function TableRow({
       delayLongPress={500}
       onPressIn={() => !isDragging && setIsPressed(true)}
       onPressOut={() => setIsPressed(false)}
-      onHoverIn={Platform.OS === "web" && !isDragging ? () => setIsHovered(true) : undefined}
-      onHoverOut={Platform.OS === "web" ? () => setIsHovered(false) : undefined}
+      onHoverIn={Platform.OS === 'web' && !isDragging ? () => setIsHovered(true) : undefined}
+      onHoverOut={Platform.OS === 'web' ? () => setIsHovered(false) : undefined}
       // Handle right-click context menu on web
-      {...(Platform.OS === "web" && {
+      {...(Platform.OS === 'web' && {
         onContextMenu: handleContextMenu,
+        draggable: true,
+        onDragStart: (e: any) => {
+          handleDragStart({ nativeEvent: { pageX: e.pageX || 0, pageY: e.pageY || 0 } });
+          applyWebDataTransfer(e);
+        },
+        onDragEnd: handleDragEnd,
       })}
-    >
+      ref={rowRef}>
       {columns.map((column, columnIndex) => {
         let content;
 
         switch (column.key) {
-          case "select":
+          case 'select':
             content = (
               <Pressable
                 onPress={(e) => {
                   e.stopPropagation();
                   onToggleSelect(track);
                 }}
-                style={styles.checkbox}
-              >
+                style={styles.checkbox}>
                 <View
                   style={[
                     styles.checkboxBox,
                     {
-                      backgroundColor: isSelected
-                        ? tokens.colors.primary
-                        : "transparent",
+                      backgroundColor: isSelected ? tokens.colors.primary : 'transparent',
                       borderColor: tokens.colors.border,
                     },
-                  ]}
-                >
+                  ]}>
                   {isSelected && (
-                    <IconSymbol
-                      name="checkmark"
-                      size={12}
-                      color={tokens.colors.onPrimary}
-                    />
+                    <IconSymbol name="checkmark" size={12} color={tokens.colors.onPrimary} />
                   )}
                 </View>
               </Pressable>
             );
             break;
-          case "number":
+          case 'number':
             content = (
-              <Text
-                style={[styles.cellText, { color: tokens.colors.subtleText }]}
-              >
+              <Text style={[styles.cellText, { color: tokens.colors.subtleText }]}>
                 {index + 1}
               </Text>
             );
             break;
-          case "source":
+          case 'source':
             content = getSourceIcon();
             break;
-          case "title":
+          case 'title':
             content = (
-              <Text
-                style={[styles.cellText, { color: tokens.colors.text }]}
-                numberOfLines={1}
-              >
+              <Text style={[styles.cellText, { color: tokens.colors.text }]} numberOfLines={1}>
                 {track.title}
               </Text>
             );
             break;
-          case "time":
+          case 'time':
             content = (
-              <Text 
-                style={[styles.cellText, { color: tokens.colors.text }]}
-                numberOfLines={1}
-              >
+              <Text style={[styles.cellText, { color: tokens.colors.text }]} numberOfLines={1}>
                 {formatDuration(track.durationMs)}
               </Text>
             );
             break;
-          case "artist":
+          case 'artist':
             content = (
-              <Text
-                style={[styles.cellText, { color: tokens.colors.text }]}
-                numberOfLines={1}
-              >
-                {track.artist?.name ?? "Unknown Artist"}
+              <Text style={[styles.cellText, { color: tokens.colors.text }]} numberOfLines={1}>
+                {track.artist?.name ?? 'Unknown Artist'}
               </Text>
             );
             break;
-          case "album":
+          case 'album':
             content = (
-              <Text
-                style={[styles.cellText, { color: tokens.colors.text }]}
-                numberOfLines={1}
-              >
-                {track.album?.title ?? "Unknown Album"}
+              <Text style={[styles.cellText, { color: tokens.colors.text }]} numberOfLines={1}>
+                {track.album?.title ?? 'Unknown Album'}
               </Text>
             );
             break;
-          case "bpm":
+          case 'bpm':
             content = (
-              <Text 
-                style={[styles.cellText, { color: tokens.colors.text }]}
-                numberOfLines={1}
-              >
-                {track.bpm ?? "N/A"}
+              <Text style={[styles.cellText, { color: tokens.colors.text }]} numberOfLines={1}>
+                {track.bpm ?? 'N/A'}
               </Text>
             );
             break;
-          case "genre":
+          case 'genre':
             content = (
-              <Text
-                style={[styles.cellText, { color: tokens.colors.text }]}
-                numberOfLines={1}
-              >
-                {track.genre ?? "Unknown"}
+              <Text style={[styles.cellText, { color: tokens.colors.text }]} numberOfLines={1}>
+                {track.genre ?? 'Unknown'}
               </Text>
             );
             break;
-          case "tags":
+          case 'tags':
             content = (
-              <ScrollView 
-                horizontal 
+              <ScrollView
+                horizontal
                 showsHorizontalScrollIndicator={false}
                 style={{ flex: 1 }}
-                contentContainerStyle={{ alignItems: 'center', gap: 4 }}
-              >
+                contentContainerStyle={{ alignItems: 'center', gap: 4 }}>
                 {track.tags?.slice(0, 3).map((tag, tagIndex) => (
                   <View
                     key={tagIndex}
-                    style={[
-                      styles.tag,
-                      { backgroundColor: tokens.colors.surfaceElevated },
-                    ]}
-                  >
+                    style={[styles.tag, { backgroundColor: tokens.colors.surfaceElevated }]}>
                     <Text
-                      style={[
-                        styles.tagText,
-                        { color: tokens.colors.subtleText },
-                      ]}
-                      numberOfLines={1}
-                    >
+                      style={[styles.tagText, { color: tokens.colors.subtleText }]}
+                      numberOfLines={1}>
                       {tag}
                     </Text>
                   </View>
                 ))}
                 {track.tags && track.tags.length > 3 && (
                   <Text
-                    style={[
-                      styles.tagText,
-                      { color: tokens.colors.subtleText },
-                    ]}
-                    numberOfLines={1}
-                  >
+                    style={[styles.tagText, { color: tokens.colors.subtleText }]}
+                    numberOfLines={1}>
                     +{track.tags.length - 3}
                   </Text>
                 )}
@@ -613,23 +522,13 @@ function TableRow({
               style={[
                 styles.cell,
                 { width: column.width },
-                column.key === "source"
-                  ? { alignItems: "center" }
-                  : {},
-                column.key === "tags"
-                  ? { flexDirection: "row", gap: 4 }
-                  : {},
-              ]}
-            >
+                column.key === 'source' ? { alignItems: 'center' } : {},
+                column.key === 'tags' ? { flexDirection: 'row', gap: 4 } : {},
+              ]}>
               {content}
             </View>
             {columnIndex < columns.length - 1 && (
-              <View
-                style={[
-                  styles.columnDivider,
-                  { backgroundColor: tokens.colors.background },
-                ]}
-              />
+              <View style={[styles.columnDivider, { backgroundColor: tokens.colors.background }]} />
             )}
           </View>
         );
@@ -639,7 +538,7 @@ function TableRow({
 
   // Set up web drag handlers
   React.useEffect(() => {
-    if (Platform.OS !== "web" || typeof document === 'undefined') return;
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
 
     const rowElement = rowRef.current;
     if (!rowElement) return;
@@ -648,7 +547,7 @@ function TableRow({
     const handleMouseDown = (e: MouseEvent) => {
       // Only handle left mouse button
       if (e.button !== 0) return;
-      
+
       const startX = e.pageX;
       const startY = e.pageY;
       let isDraggingNow = false;
@@ -656,13 +555,13 @@ function TableRow({
       const handleMouseMove = (moveEvent: MouseEvent) => {
         const deltaX = Math.abs(moveEvent.pageX - startX);
         const deltaY = Math.abs(moveEvent.pageY - startY);
-        
+
         // Start dragging after 5px movement
         if ((deltaX > 5 || deltaY > 5) && !isDraggingNow) {
           isDraggingNow = true;
           handleDragStart({ nativeEvent: { pageX: moveEvent.pageX, pageY: moveEvent.pageY } });
         }
-        
+
         if (isDraggingNow) {
           handleDragUpdate({ nativeEvent: { pageX: moveEvent.pageX, pageY: moveEvent.pageY } });
         }
@@ -691,13 +590,9 @@ function TableRow({
   }, [track.id]);
 
   // Wrap with gesture handlers for drag functionality
-  if (Platform.OS === "web") {
+  if (Platform.OS === 'web') {
     // For web, use ref-based approach
-    return (
-      <View ref={rowRef}>
-        {rowContent}
-      </View>
-    );
+    return <View ref={rowRef}>{rowContent}</View>;
   }
 
   // For mobile, use LongPressGestureHandler + PanGestureHandler
@@ -708,17 +603,18 @@ function TableRow({
         if (event.nativeEvent.state === State.ACTIVE) {
           handleDragStart(event);
         }
-      }}
-    >
+      }}>
       <PanGestureHandler
         onGestureEvent={handleDragUpdate}
         onHandlerStateChange={(event) => {
-          if (event.nativeEvent.state === State.END || event.nativeEvent.state === State.CANCELLED) {
+          if (
+            event.nativeEvent.state === State.END ||
+            event.nativeEvent.state === State.CANCELLED
+          ) {
             handleDragEnd();
           }
         }}
-        enabled={isDragging}
-      >
+        enabled={isDragging}>
         {rowContent}
       </PanGestureHandler>
     </LongPressGestureHandler>
@@ -736,25 +632,21 @@ export function TableView({
   onBulkAddToPlaylist,
 }: TableViewProps) {
   const { tokens } = useTheme();
-  const [sortColumn, setSortColumn] = React.useState<string>("time");
-  const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">(
-    "desc"
-  );
+  const [sortColumn, setSortColumn] = React.useState<string>('time');
+  const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('desc');
   const [columns, setColumns] = React.useState<ColumnConfig[]>([
-    { key: "select", label: "", width: 40 },
-    { key: "number", label: "#", width: 40 },
-    { key: "source", label: "Source", width: 60 },
-    { key: "title", label: "Title", width: 200 },
-    { key: "time", label: "Time", width: 60 },
-    { key: "artist", label: "Artist", width: 150 },
-    { key: "album", label: "Album", width: 150 },
-    { key: "bpm", label: "BPM", width: 60 },
-    { key: "genre", label: "Genre", width: 100 },
-    { key: "tags", label: "Tags", width: 200 },
+    { key: 'select', label: '', width: 40 },
+    { key: 'number', label: '#', width: 40 },
+    { key: 'source', label: 'Source', width: 60 },
+    { key: 'title', label: 'Title', width: 200 },
+    { key: 'time', label: 'Time', width: 60 },
+    { key: 'artist', label: 'Artist', width: 150 },
+    { key: 'album', label: 'Album', width: 150 },
+    { key: 'bpm', label: 'BPM', width: 60 },
+    { key: 'genre', label: 'Genre', width: 100 },
+    { key: 'tags', label: 'Tags', width: 200 },
   ]);
-  const [selectedTracks, setSelectedTracks] = React.useState<Set<string>>(
-    new Set()
-  );
+  const [selectedTracks, setSelectedTracks] = React.useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = React.useState<{
     visible: boolean;
     position: { x: number; y: number };
@@ -767,25 +659,20 @@ export function TableView({
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortColumn(column);
-      setSortDirection("asc");
+      setSortDirection('asc');
     }
   };
 
   const handleColumnResize = (columnKey: string, newWidth: number) => {
     setColumns((prevColumns) =>
-      prevColumns.map((col) =>
-        col.key === columnKey ? { ...col, width: newWidth } : col
-      )
+      prevColumns.map((col) => (col.key === columnKey ? { ...col, width: newWidth } : col))
     );
   };
 
-  const handleContextMenu = (
-    track: Track,
-    position: { x: number; y: number }
-  ) => {
+  const handleContextMenu = (track: Track, position: { x: number; y: number }) => {
     setContextMenu({
       visible: true,
       position,
@@ -831,47 +718,42 @@ export function TableView({
       let bValue: any;
 
       switch (sortColumn) {
-        case "title":
-          aValue = a.title?.toLowerCase() ?? "";
-          bValue = b.title?.toLowerCase() ?? "";
+        case 'title':
+          aValue = a.title?.toLowerCase() ?? '';
+          bValue = b.title?.toLowerCase() ?? '';
           break;
-        case "artist":
-          aValue = a.artist?.name?.toLowerCase() ?? "";
-          bValue = b.artist?.name?.toLowerCase() ?? "";
+        case 'artist':
+          aValue = a.artist?.name?.toLowerCase() ?? '';
+          bValue = b.artist?.name?.toLowerCase() ?? '';
           break;
-        case "album":
-          aValue = a.album?.title?.toLowerCase() ?? "";
-          bValue = b.album?.title?.toLowerCase() ?? "";
+        case 'album':
+          aValue = a.album?.title?.toLowerCase() ?? '';
+          bValue = b.album?.title?.toLowerCase() ?? '';
           break;
-        case "time":
+        case 'time':
           aValue = a.durationMs ?? 0;
           bValue = b.durationMs ?? 0;
           break;
-        case "bpm":
+        case 'bpm':
           aValue = a.bpm ?? 0;
           bValue = b.bpm ?? 0;
           break;
-        case "genre":
-          aValue = a.genre?.toLowerCase() ?? "";
-          bValue = b.genre?.toLowerCase() ?? "";
+        case 'genre':
+          aValue = a.genre?.toLowerCase() ?? '';
+          bValue = b.genre?.toLowerCase() ?? '';
           break;
         default:
           return 0;
       }
 
-      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
   }, [tracks, sortColumn, sortDirection]);
 
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: tokens.colors.background }
-      ]}
-    >
+    <View style={[styles.container, { backgroundColor: tokens.colors.background }]}>
       <TableHeader
         onSort={handleSort}
         sortColumn={sortColumn}
@@ -929,58 +811,58 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   header: {
-    flexDirection: "row",
+    flexDirection: 'row',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 2,
   },
   headerCellContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   cellContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   headerCell: {
     paddingHorizontal: 8,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 4,
   },
   columnDivider: {
     width: 1,
-    height: "100%",
+    height: '100%',
   },
   resizeHandle: {
     width: 1,
-    height: "100%",
-    cursor: "pointer" as any,
-    alignItems: "center",
-    justifyContent: "center",
+    height: '100%',
+    cursor: 'pointer' as any,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerText: {
     fontSize: 12,
-    fontWeight: "400",
-    textTransform: "capitalize",
+    fontWeight: '400',
+    textTransform: 'capitalize',
     letterSpacing: 0.5,
   },
   list: {
     flex: 1,
   },
   row: {
-    flexDirection: "row",
+    flexDirection: 'row',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderBottomWidth: 2,
   },
   cell: {
     paddingHorizontal: 8,
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   cellText: {
     fontSize: 14,
-    fontWeight: "400",
+    fontWeight: '400',
   },
   tag: {
     paddingHorizontal: 6,
@@ -989,23 +871,23 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 11,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   // Context Menu Styles
   contextMenuBackdrop: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "transparent",
+    backgroundColor: 'transparent',
   },
   contextMenu: {
-    position: "absolute",
+    position: 'absolute',
     minWidth: 180,
     borderRadius: 8,
     borderWidth: 1,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -1019,26 +901,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   contextMenuItemContent: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
   },
   contextMenuItemText: {
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   // Checkbox Styles
   checkbox: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   checkboxBox: {
     width: 18,
     height: 18,
     borderWidth: 1,
     borderRadius: 3,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   checkboxIndeterminate: {
     width: 8,
@@ -1046,3 +928,7 @@ const styles = StyleSheet.create({
     borderRadius: 1,
   },
 });
+
+
+
+

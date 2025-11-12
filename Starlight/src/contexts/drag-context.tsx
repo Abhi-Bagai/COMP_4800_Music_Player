@@ -3,10 +3,10 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 interface DragContextType {
   draggedTrack: { id: string; title: string; artist?: { name: string } | null } | null;
   dragPosition: { x: number; y: number } | null;
-  setDraggedTrack: (track: { id: string; title: string; artist?: { name: string } | null } | null) => void;
-  setDragPosition: (position: { x: number; y: number } | null) => void;
-  hoveredPlaylistId: string | null;
-  setHoveredPlaylistId: (id: string | null) => void;
+  setDraggedTrack: React.Dispatch<React.SetStateAction<{ id: string; title: string; artist?: { name: string } | null } | null>>;
+  setDragPosition: React.Dispatch<React.SetStateAction<{ x: number; y: number } | null>>;
+  hoveredTargetId: string | null;
+  setHoveredTargetId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 const DragContext = createContext<DragContextType | undefined>(undefined);
@@ -14,7 +14,7 @@ const DragContext = createContext<DragContextType | undefined>(undefined);
 export function DragProvider({ children }: { children: ReactNode }) {
   const [draggedTrack, setDraggedTrack] = useState<{ id: string; title: string; artist?: { name: string } | null } | null>(null);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
-  const [hoveredPlaylistId, setHoveredPlaylistId] = useState<string | null>(null);
+  const [hoveredTargetId, setHoveredTargetId] = useState<string | null>(null);
 
   return (
     <DragContext.Provider
@@ -23,8 +23,8 @@ export function DragProvider({ children }: { children: ReactNode }) {
         dragPosition,
         setDraggedTrack,
         setDragPosition,
-        hoveredPlaylistId,
-        setHoveredPlaylistId,
+        hoveredTargetId,
+        setHoveredTargetId,
       }}
     >
       {children}
