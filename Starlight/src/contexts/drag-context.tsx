@@ -8,6 +8,8 @@ interface DragContextType {
   setDragPosition: (position: { x: number; y: number } | null) => void;
   hoveredPlaylistId: string | null;
   setHoveredPlaylistId: (id: string | null) => void;
+  lastHoveredPlaylistId: string | null;
+  resetLastHoveredPlaylistId: () => void;
   registerDropZoneLayout: (id: string, layout: DropZoneLayout) => void;
   unregisterDropZoneLayout: (id: string) => void;
 }
@@ -25,6 +27,7 @@ export function DragProvider({ children }: { children: ReactNode }) {
   const [draggedTrack, setDraggedTrack] = useState<{ id: string; title: string; artist?: { name: string } | null } | null>(null);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [hoveredPlaylistId, setHoveredPlaylistId] = useState<string | null>(null);
+  const [lastHoveredPlaylistId, setLastHoveredPlaylistId] = useState<string | null>(null);
   const [dropZoneLayouts, setDropZoneLayouts] = useState<Record<string, DropZoneLayout>>({});
 
   const registerDropZoneLayout = useCallback((id: string, layout: DropZoneLayout) => {
@@ -89,8 +92,15 @@ export function DragProvider({ children }: { children: ReactNode }) {
 
     if (nextHoveredId !== hoveredPlaylistId) {
       setHoveredPlaylistId(nextHoveredId);
+      if (nextHoveredId) {
+        setLastHoveredPlaylistId(nextHoveredId);
+      }
     }
-  }, [dragPosition, draggedTrack, dropZoneLayouts, hoveredPlaylistId, setHoveredPlaylistId]);
+  }, [dragPosition, draggedTrack, dropZoneLayouts, hoveredPlaylistId]);
+
+  const resetLastHoveredPlaylistId = useCallback(() => {
+    setLastHoveredPlaylistId(null);
+  }, []);
 
   return (
     <DragContext.Provider
@@ -101,6 +111,8 @@ export function DragProvider({ children }: { children: ReactNode }) {
         setDragPosition,
         hoveredPlaylistId,
         setHoveredPlaylistId,
+        lastHoveredPlaylistId,
+        resetLastHoveredPlaylistId,
         registerDropZoneLayout,
         unregisterDropZoneLayout,
       }}

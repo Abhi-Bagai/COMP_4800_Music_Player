@@ -81,6 +81,8 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
     setDragPosition,
     hoveredPlaylistId,
     setHoveredPlaylistId,
+    lastHoveredPlaylistId,
+    resetLastHoveredPlaylistId,
   } = useDrag();
   const [slideAnim] = useState(new Animated.Value(screenHeight));
   const trackInfoRef = useRef<View | null>(null);
@@ -228,14 +230,16 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
     if (!isDraggingTrack) return;
 
     setIsDraggingTrack(false);
-    const targetPlaylistId = hoveredPlaylistId;
+    const targetPlaylistId = hoveredPlaylistId ?? lastHoveredPlaylistId;
 
     if (targetPlaylistId) {
       addActiveTrackToPlaylist(targetPlaylistId).finally(() => {
         setHoveredPlaylistId(null);
+        resetLastHoveredPlaylistId();
       });
     } else {
       setHoveredPlaylistId(null);
+      resetLastHoveredPlaylistId();
     }
 
     requestAnimationFrame(() => {
@@ -245,10 +249,12 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
   }, [
     addActiveTrackToPlaylist,
     hoveredPlaylistId,
+    lastHoveredPlaylistId,
     isDraggingTrack,
     setDragPosition,
     setDraggedTrack,
     setHoveredPlaylistId,
+    resetLastHoveredPlaylistId,
   ]);
 
   useEffect(() => {
@@ -307,8 +313,9 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
     setDraggedTrack(null);
     setDragPosition(null);
     setHoveredPlaylistId(null);
+    resetLastHoveredPlaylistId();
     dropProcessingRef.current = false;
-  }, [visible, setDragPosition, setDraggedTrack, setHoveredPlaylistId]);
+  }, [visible, setDragPosition, setDraggedTrack, setHoveredPlaylistId, resetLastHoveredPlaylistId]);
 
   if (!activeTrack) return null;
 
