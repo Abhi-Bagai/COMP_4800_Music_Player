@@ -18,6 +18,7 @@ interface SidebarNavigationProps {
   onViewChange: (view: string) => void;
   currentView: string;
   onSearchChange?: (searchText: string) => void;
+  onPlaylistSelect?: (playlistId: string) => void;
 }
 
 interface NavigationItem {
@@ -64,6 +65,7 @@ export function SidebarNavigation({
   onViewChange,
   currentView,
   onSearchChange,
+  onPlaylistSelect,
 }: SidebarNavigationProps) {
   const { tokens } = useTheme();
   const { playlists } = usePlaylistStore();
@@ -88,9 +90,10 @@ export function SidebarNavigation({
 
   const handlePlaylistPress = useCallback(
     (playlistId: string) => {
+      onPlaylistSelect?.(playlistId);
       onViewChange(`playlist:${playlistId}`);
     },
-    [onViewChange]
+    [onPlaylistSelect, onViewChange]
   );
 
   const navigationItemsWithPlaylists = useMemo(() => {

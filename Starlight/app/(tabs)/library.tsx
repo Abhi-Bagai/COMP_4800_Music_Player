@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   Alert,
   FlatList,
@@ -301,9 +301,20 @@ export default function HomeScreen() {
     setShowAddToPlaylist(true);
   };
 
-  const handlePlaylistPress = (playlistId: string) => {
+  const handlePlaylistPress = useCallback((playlistId: string) => {
     setSelectedPlaylistId(playlistId);
-  };
+  }, []);
+
+  const handleSidebarNavigationChange = useCallback(
+    (view: string) => {
+      if (view.startsWith("playlist:")) {
+        setSidebarView("playlists");
+        return;
+      }
+      setSidebarView(view);
+    },
+    []
+  );
 
   const handleClearLibrary = async () => {
     console.log("handleClearLibrary called");
@@ -463,9 +474,10 @@ export default function HomeScreen() {
         {/* Sidebar */}
         <View style={{ width: sidebarWidth }}>
           <SidebarNavigation
-            onViewChange={setSidebarView}
+            onViewChange={handleSidebarNavigationChange}
             currentView={sidebarView}
             onSearchChange={setSearchText}
+            onPlaylistSelect={handlePlaylistPress}
           />
         </View>
 
