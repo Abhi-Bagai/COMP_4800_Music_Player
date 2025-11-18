@@ -224,51 +224,6 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
 
         {/* Center - Progress and Controls */}
         <View style={styles.centerSection}>
-          <View style={styles.progressContainer} {...wheelProps as any}>
-            {isScrubbing && (
-              <View 
-                style={[
-                  styles.scrubTooltip, 
-                  { 
-                    backgroundColor: tokens.colors.surfaceElevated,
-                    left: `${progressPercentage}%`,
-                    shadowColor: tokens.colors.text,
-                  }
-                ]}
-              >
-                <Text style={[styles.scrubTooltipText, { color: tokens.colors.text }]}>
-                  {formatScrubTime(currentDisplayPosition)}
-                </Text>
-              </View>
-            )}
-            <Text
-              style={[styles.timeText, { color: tokens.colors.subtleText }]}
-            >
-              {formatTime(currentDisplayPosition)}
-            </Text>
-            <View
-              style={[
-                styles.progressBar,
-                { backgroundColor: tokens.colors.surface },
-              ]}
-            >
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${progressPercentage}%`,
-                    backgroundColor: tokens.colors.primary,
-                  },
-                ]}
-              />
-            </View>
-            <Text
-              style={[styles.timeText, { color: tokens.colors.subtleText }]}
-            >
-              -{formatTime(remaining)}
-            </Text>
-          </View>
-
           <View style={styles.controls}>
             <Pressable
               style={styles.controlButton}
@@ -324,6 +279,51 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
               <IconSymbol name="repeat" size={16} color={tokens.colors.primary} />
             </Pressable>
           </View>
+
+          <View style={styles.progressContainer} {...wheelProps as any}>
+            {isScrubbing && (
+              <View 
+                style={[
+                  styles.scrubTooltip, 
+                  { 
+                    backgroundColor: tokens.colors.surfaceElevated,
+                    left: `${progressPercentage}%`,
+                    shadowColor: tokens.colors.text,
+                  }
+                ]}
+              >
+                <Text style={[styles.scrubTooltipText, { color: tokens.colors.text }]}>
+                  {formatScrubTime(currentDisplayPosition)}
+                </Text>
+              </View>
+            )}
+            <Text
+              style={[styles.timeText, { color: tokens.colors.subtleText }]}
+            >
+              {formatTime(currentDisplayPosition)}
+            </Text>
+            <View
+              style={[
+                styles.progressBar,
+                { backgroundColor: tokens.colors.surface },
+              ]}
+            >
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${progressPercentage}%`,
+                    backgroundColor: tokens.colors.primary,
+                  },
+                ]}
+              />
+            </View>
+            <Text
+              style={[styles.timeText, { color: tokens.colors.subtleText }]}
+            >
+              -{formatTime(remaining)}
+            </Text>
+          </View>
         </View>
 
         {/* Right Side - Volume */}
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 80,
+    height: 68,
     borderTopWidth: 1,
   },
   content: {
@@ -363,10 +363,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingTop: 12,
+    paddingBottom: 0,
     gap: 20,
+    position: "relative",
   },
   leftSection: {
+    position: "absolute",
+    left: 20,
     width: 280,
     flexDirection: "row",
     alignItems: "center",
@@ -400,14 +404,17 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   centerSection: {
-    flex: 1,
+    position: "absolute",
+    left: -20,
+    right: -20,
     alignItems: "center",
-    gap: 8,
+    gap: 0,
   },
   progressContainer: {
     flexDirection: "row",
     alignItems: "center",
-    width: "100%",
+    width: 280,
+    height: 20,
     gap: 12,
     position: "relative",
   },
@@ -429,6 +436,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    height: 20,
   },
   controlButton: {
     width: 24,
@@ -443,6 +451,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   rightSection: {
+    position: "absolute",
+    right: 20,
     width: 120,
     flexDirection: "row",
     alignItems: "center",

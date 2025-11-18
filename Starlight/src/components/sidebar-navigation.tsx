@@ -209,7 +209,7 @@ export function SidebarNavigation({
 
   return (
     <View
-      style={[styles.container, { backgroundColor: tokens.colors.surface }]}
+      style={[styles.container, { backgroundColor: "#14151B" }]}
     >
       {/* Search Bar */}
       <View

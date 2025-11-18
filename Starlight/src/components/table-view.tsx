@@ -126,7 +126,7 @@ function TableHeader({
                 onPress={() => onSort?.(column.key)}
               >
                 <Text
-                  style={[styles.headerText, { color: tokens.colors.text }]}
+                  style={[styles.headerText, { color: tokens.colors.subtleText }]}
                 >
                   {column.label}
                 </Text>
@@ -136,7 +136,7 @@ function TableHeader({
                       sortDirection === "asc" ? "chevron.up" : "chevron.down"
                     }
                     size={12}
-                    color={tokens.colors.primary}
+                    color={tokens.colors.subtleText}
                   />
                 )}
               </Pressable>
@@ -715,7 +715,7 @@ function TableRow({
             <View
               style={[
                 styles.cell,
-                { width: column.width },
+                { width: column.width + 1 },
                 column.key === "source"
                   ? { alignItems: "center" }
                   : {},
@@ -986,6 +986,11 @@ export function TableView({
     });
   }, [tracks, sortColumn, sortDirection]);
 
+  // Filter out the "select" column from visible columns
+  const visibleColumns = React.useMemo(() => {
+    return columns.filter((col) => col.key !== "select");
+  }, [columns]);
+
   return (
     <View
       style={[
@@ -997,7 +1002,7 @@ export function TableView({
         onSort={handleSort}
         sortColumn={sortColumn}
         sortDirection={sortDirection}
-        columns={columns}
+        columns={visibleColumns}
         onColumnResize={handleColumnResize}
         selectedTracks={selectedTracks}
         allTracks={tracks}
@@ -1014,7 +1019,7 @@ export function TableView({
             onDelete={onTrackDelete}
             onAddToPlaylist={onTrackAddToPlaylist}
             onShowPlaylists={onTrackShowPlaylists}
-            columns={columns}
+            columns={visibleColumns}
             onContextMenu={handleContextMenu}
             isSelected={selectedTracks.has(item.id)}
             onToggleSelect={handleToggleSelect}
@@ -1046,12 +1051,12 @@ export function TableView({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: 22,
+    paddingTop: 12,
   },
   header: {
     flexDirection: "row",
-    paddingVertical: 12,
+    paddingVertical: 7,
     paddingHorizontal: 16,
     borderBottomWidth: 2,
   },
@@ -1064,10 +1069,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerCell: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    justifyContent: "space-between",
   },
   columnDivider: {
     width: 1,
@@ -1104,13 +1109,15 @@ const styles = StyleSheet.create({
     fontWeight: "400",
   },
   tag: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
   },
   tagText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "500",
+    lineHeight: 10,
+    includeFontPadding: false,
+    marginVertical: -4,
   },
   // Context Menu Styles
   contextMenuBackdrop: {

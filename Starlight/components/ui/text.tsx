@@ -6,7 +6,7 @@ import { Platform, Text as RNText, type Role } from 'react-native';
 
 const textVariants = cva(
   cn(
-    'text-base text-foreground',
+    'text-[13px] text-foreground font-normal tracking-normal font-sans',
     Platform.select({
       web: 'select-text',
     })
