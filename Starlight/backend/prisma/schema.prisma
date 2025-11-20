@@ -1,0 +1,84 @@
+// Prisma schema for Starlight backend
+// PostgreSQL database with Spotify integration
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - represents a Starlight user
+// Note: Extend this model with your existing user fields
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  spotifyAccount SpotifyAccount?
+  apiCaches      ApiCache[]
+
+  @@map("users")
+}
+
+// Spotify OAuth account linked to a Starlight user
+model SpotifyAccount {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  spotifyUserId String  @unique // Spotify's user ID (from /v1/me)
+  accessToken  String   // Encrypted/hashed in production
+  refreshToken String   // Encrypted/hashed in production
+  expiresAt    DateTime // When accessToken expires
+  scope        String   // Granted scopes (space-separated)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([spotifyUserId])
+  @@map("spotify_accounts")
+}
+
+// API response cache to reduce Spotify API calls
+model ApiCache {
+  id        String   @id @default(cuid())
+  key       String   @unique // Format: "spotify:{userId}:{resource}:{resourceId}"
+  payload   Json     // Cached response payload
+  expiresAt DateTime // Cache expiration time
+  userId    String   // For easy cleanup per user
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([key])
+  @@index([userId])
+  @@index([expiresAt]) // For cleanup queries
+  @@map("api_caches")
+}
+
+// OAuth login attempt (stores PKCE state temporarily)
+model SpotifyLoginAttempt {
+  id           String   @id @default(cuid())
+  userId       String   // Starlight user ID
+  state        String   @unique // CSRF protection token
+  codeVerifier String   // PKCE code verifier
+  codeChallenge String  // PKCE code challenge (base64url)
+  redirectUri  String   // Where to redirect after auth
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime // Cleanup after 10 minutes
+
+  @@index([state])
+  @@index([userId])
+  @@index([expiresAt]) // For cleanup queries
+  @@map("spotify_login_attempts")
+}
+

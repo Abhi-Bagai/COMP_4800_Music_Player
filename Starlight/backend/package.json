@@ -1,0 +1,32 @@
+{
+  "name": "starlight-backend",
+  "version": "1.0.0",
+  "description": "Starlight backend server with Spotify integration",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.20.0",
+    "koa": "^2.15.0",
+    "koa-bodyparser": "^4.4.1",
+    "koa-cors": "^0.0.16",
+    "koa-router": "^12.0.1",
+    "koa-session": "^6.4.0"
+  },
+  "devDependencies": {
+    "@types/koa": "^2.15.0",
+    "@types/koa-bodyparser": "^4.4.0",
+    "@types/koa-router": "^7.4.8",
+    "@types/koa-session": "^6.4.5",
+    "@types/node": "^20.14.0",
+    "prisma": "^5.20.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0"
+  }
+}
