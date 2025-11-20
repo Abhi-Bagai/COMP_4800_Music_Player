@@ -1,18 +1,12 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from "react-native";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
-import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Text } from "@/src/components/ui/text";
-import { usePlaylistStore } from "@/src/state/playlist-store";
-import { useDrag } from "@/src/contexts/drag-context";
-import { useTheme } from "@/src/theme/provider";
-import { Platform } from "react-native";
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Text } from '@/src/components/ui/text';
+import { usePlaylistStore } from '@/src/state/playlist-store';
+import { useDrag } from '@/src/contexts/drag-context';
+import { useTheme } from '@/src/theme/provider';
+import { Platform } from 'react-native';
 
 interface SidebarNavigationProps {
   onViewChange: (view: string) => void;
@@ -30,34 +24,39 @@ interface NavigationItem {
 
 const navigationItems: NavigationItem[] = [
   {
-    id: "library",
-    label: "Library",
-    icon: "music.note.list",
+    id: 'library',
+    label: 'Library',
+    icon: 'music.note.list',
   },
   {
-    id: "now-playing",
-    label: "Now Playing",
-    icon: "play.fill",
+    id: 'now-playing',
+    label: 'Now Playing',
+    icon: 'play.fill',
   },
   {
-    id: "artists",
-    label: "Artists",
-    icon: "mic",
+    id: 'artists',
+    label: 'Artists',
+    icon: 'mic',
   },
   {
-    id: "albums",
-    label: "Albums",
-    icon: "opticaldisc",
+    id: 'albums',
+    label: 'Albums',
+    icon: 'opticaldisc',
   },
   {
-    id: "playlists",
-    label: "Playlists",
-    icon: "music.note.list",
+    id: 'playlists',
+    label: 'Playlists',
+    icon: 'music.note.list',
   },
   {
-    id: "genres",
-    label: "Genres",
-    icon: "pianokeys",
+    id: 'spotify-playlists',
+    label: 'Get Spotify Playlists',
+    icon: 'cloud',
+  },
+  {
+    id: 'genres',
+    label: 'Genres',
+    icon: 'pianokeys',
   },
 ];
 
@@ -70,11 +69,8 @@ export function SidebarNavigation({
   const { tokens } = useTheme();
   const { playlists } = usePlaylistStore();
   const { draggedTrack, hoveredPlaylistId } = useDrag();
-  const [expandedItems, setExpandedItems] = useState<string[]>([
-    "library",
-    "playlists",
-  ]);
-  const [searchText, setSearchText] = useState("");
+  const [expandedItems, setExpandedItems] = useState<string[]>(['library', 'playlists']);
+  const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
     onSearchChange?.(searchText);
@@ -82,9 +78,7 @@ export function SidebarNavigation({
 
   const toggleExpanded = (itemId: string) => {
     setExpandedItems((prev) =>
-      prev.includes(itemId)
-        ? prev.filter((id) => id !== itemId)
-        : [...prev, itemId]
+      prev.includes(itemId) ? prev.filter((id) => id !== itemId) : [...prev, itemId]
     );
   };
 
@@ -98,13 +92,13 @@ export function SidebarNavigation({
 
   const navigationItemsWithPlaylists = useMemo(() => {
     return navigationItems.map((item) =>
-      item.id === "playlists"
+      item.id === 'playlists'
         ? {
             ...item,
             children: playlists.map((playlist) => ({
               id: playlist.id,
               label: playlist.name,
-              icon: "music.note.list",
+              icon: 'music.note.list',
             })),
           }
         : item
@@ -114,8 +108,10 @@ export function SidebarNavigation({
   const renderNavigationItem = (item: NavigationItem, level = 0) => {
     const isExpanded = expandedItems.includes(item.id);
     const isSelected = currentView === item.id;
-    const isPlaylistsNode = item.id === "playlists";
-    const children = isPlaylistsNode ? navigationItemsWithPlaylists.find((nav) => nav.id === "playlists")?.children : item.children;
+    const isPlaylistsNode = item.id === 'playlists';
+    const children = isPlaylistsNode
+      ? navigationItemsWithPlaylists.find((nav) => nav.id === 'playlists')?.children
+      : item.children;
     const hasChildren = !!children && children.length > 0;
 
     return (
@@ -127,8 +123,8 @@ export function SidebarNavigation({
               backgroundColor: isSelected
                 ? tokens.colors.surfaceElevated
                 : pressed
-                ? tokens.colors.surfaceElevated
-                : "transparent",
+                  ? tokens.colors.surfaceElevated
+                  : 'transparent',
               paddingLeft: 16 + level * 16,
             },
           ]}
@@ -141,8 +137,7 @@ export function SidebarNavigation({
             } else {
               onViewChange(item.id);
             }
-          }}
-        >
+          }}>
           <View style={styles.navItemContent}>
             <IconSymbol
               name={item.icon as any}
@@ -153,23 +148,16 @@ export function SidebarNavigation({
               style={[
                 styles.navItemText,
                 {
-                  color: isSelected
-                    ? tokens.colors.primary
-                    : tokens.colors.text,
+                  color: isSelected ? tokens.colors.primary : tokens.colors.text,
                 },
-              ]}
-            >
+              ]}>
               {item.label}
             </Text>
             {hasChildren && (
               <IconSymbol
-                name={isExpanded ? "chevron.up" : "chevron.down"}
+                name={isExpanded ? 'chevron.up' : 'chevron.down'}
                 size={12}
-                color={
-                  isSelected
-                    ? tokens.colors.primary
-                    : tokens.colors.subtleText
-                }
+                color={isSelected ? tokens.colors.primary : tokens.colors.subtleText}
               />
             )}
           </View>
@@ -208,18 +196,10 @@ export function SidebarNavigation({
   };
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: tokens.colors.surface }]}
-    >
+    <View style={[styles.container, { backgroundColor: tokens.colors.surface }]}>
       {/* Search Bar */}
-      <View
-        style={[styles.searchContainer, { backgroundColor: tokens.colors.surfaceElevated }]}
-      >
-        <IconSymbol
-          name="magnifyingglass"
-          size={16}
-          color={tokens.colors.subtleText}
-        />
+      <View style={[styles.searchContainer, { backgroundColor: tokens.colors.surfaceElevated }]}>
+        <IconSymbol name="magnifyingglass" size={16} color={tokens.colors.subtleText} />
         <TextInput
           style={[styles.searchInput, { color: tokens.colors.text }]}
           placeholder="Search library..."
@@ -230,10 +210,7 @@ export function SidebarNavigation({
       </View>
 
       {/* Navigation Items */}
-      <ScrollView
-        style={styles.navigationContainer}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView style={styles.navigationContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.navigationContent}>
           {navigationItems.map((item) => renderNavigationItem(item))}
         </View>
@@ -247,8 +224,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
     margin: 12,
@@ -271,8 +248,8 @@ const styles = StyleSheet.create({
     marginVertical: 1,
   },
   navItemContent: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 12,
     gap: 8,
@@ -280,7 +257,7 @@ const styles = StyleSheet.create({
   navItemText: {
     flex: 1,
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   childrenContainer: {
     marginLeft: 8,
@@ -333,11 +310,11 @@ function SidebarPlaylistNavItem({
    * Web needs to recompute when the window resizes because our layout transform changes.
    */
   useEffect(() => {
-    if (Platform.OS === "web") {
+    if (Platform.OS === 'web') {
       const handleResize = () => updateDropZoneLayout();
-      window.addEventListener("resize", handleResize);
+      window.addEventListener('resize', handleResize);
       return () => {
-        window.removeEventListener("resize", handleResize);
+        window.removeEventListener('resize', handleResize);
       };
     }
     return;
@@ -354,24 +331,23 @@ function SidebarPlaylistNavItem({
     <View
       ref={containerRef}
       onLayout={updateDropZoneLayout}
-      nativeID={Platform.OS === "web" ? `playlist-drop-${playlist.id}` : undefined}
-    >
+      nativeID={Platform.OS === 'web' ? `playlist-drop-${playlist.id}` : undefined}>
       <Pressable
         style={({ pressed }) => [
           styles.navItem,
           {
-            backgroundColor: isHovered && isDragged
-              ? tokens.colors.primary + "20"
-              : pressed
-              ? tokens.colors.surfaceElevated
-              : "transparent",
+            backgroundColor:
+              isHovered && isDragged
+                ? tokens.colors.primary + '20'
+                : pressed
+                  ? tokens.colors.surfaceElevated
+                  : 'transparent',
             paddingLeft: 16 + level * 16,
             borderWidth: isHovered && isDragged ? 1 : 0,
-            borderColor: isHovered && isDragged ? tokens.colors.primary : "transparent",
+            borderColor: isHovered && isDragged ? tokens.colors.primary : 'transparent',
           },
         ]}
-        onPress={() => onPress(playlist.id)}
-      >
+        onPress={() => onPress(playlist.id)}>
         <View style={styles.navItemContent}>
           <IconSymbol
             name="music.note.list"
@@ -384,20 +360,18 @@ function SidebarPlaylistNavItem({
                 styles.navItemText,
                 {
                   color: tokens.colors.text,
-                  fontWeight: "500",
+                  fontWeight: '500',
                 },
               ]}
-              numberOfLines={1}
-            >
+              numberOfLines={1}>
               {playlist.name}
             </Text>
             <Text
               style={{
                 color: tokens.colors.subtleText,
                 fontSize: 12,
-              }}
-            >
-              {playlist.trackCount} {playlist.trackCount === 1 ? "track" : "tracks"}
+              }}>
+              {playlist.trackCount} {playlist.trackCount === 1 ? 'track' : 'tracks'}
             </Text>
           </View>
         </View>

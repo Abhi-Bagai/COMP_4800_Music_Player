@@ -4,6 +4,7 @@ import session from 'koa-session';
 import { config } from './config';
 import authRoutes from './routes/auth';
 import spotifyRoutes from './routes/spotify';
+import testRoutes from './routes/test';
 
 const app = new Koa();
 
@@ -54,6 +55,7 @@ app.use(async (ctx, next) => {
 // });
 
 // Routes
+app.use(testRoutes.routes()).use(testRoutes.allowedMethods());
 app.use(authRoutes.routes()).use(authRoutes.allowedMethods());
 app.use(spotifyRoutes.routes()).use(spotifyRoutes.allowedMethods());
 
@@ -80,4 +82,3 @@ app.listen(port, () => {
   console.log(`🚀 Starlight backend server running on http://localhost:${port}`);
   console.log(`📝 Environment: ${config.nodeEnv}`);
 });
-

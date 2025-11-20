@@ -55,7 +55,10 @@ router.get('/spotify/callback', async (ctx: Context) => {
 
   if (error) {
     // User denied authorization
-    ctx.redirect(`${config.frontend.deepLink}?error=${error}`);
+    const redirectUrl = config.frontend.url
+      ? `${config.frontend.url}?spotify_auth=error&error=${error}`
+      : `${config.frontend.deepLink}?error=${error}`;
+    ctx.redirect(redirectUrl);
     return;
   }
 
@@ -129,7 +132,11 @@ router.get('/spotify/callback', async (ctx: Context) => {
     });
 
     // Redirect to frontend with success
-    ctx.redirect(`${config.frontend.deepLink}?success=true`);
+    // For web, use the frontend URL; for mobile, use deep link
+    const redirectUrl = config.frontend.url
+      ? `${config.frontend.url}?spotify_auth=success`
+      : `${config.frontend.deepLink}?success=true`;
+    ctx.redirect(redirectUrl);
   } catch (error) {
     console.error('OAuth callback error:', error);
     ctx.status = 500;

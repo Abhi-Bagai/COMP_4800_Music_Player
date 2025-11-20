@@ -24,6 +24,7 @@ export const config = {
 
   frontend: {
     deepLink: process.env.FRONTEND_DEEP_LINK || 'starlight://auth/spotify/success',
+    url: process.env.FRONTEND_URL || 'https://poetic-empanada-73279a.netlify.app',
   },
 
   cache: {
@@ -35,4 +36,3 @@ export const config = {
 if (!config.spotify.clientId || !config.spotify.clientSecret) {
   throw new Error('SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET must be set');
 }
-
