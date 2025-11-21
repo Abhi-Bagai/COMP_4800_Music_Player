@@ -219,7 +219,7 @@ function Content({
               <View style={[
                 styles.playlistArt, 
                 { backgroundColor: tokens.colors.surfaceElevated },
-                isDisabled && { opacity: 0.5 }
+                isDisabled && { opacity: tokens.opacity.disabled }
               ]}>
                 <IconSymbol 
                   name={isTrackInPlaylist ? "checkmark.circle.fill" : "music.note.list"} 
@@ -232,7 +232,7 @@ function Content({
                   styles.playlistTitle, 
                   { 
                     color: isDisabled ? tokens.colors.subtleText : tokens.colors.text,
-                    opacity: isDisabled ? 0.6 : 1
+                    opacity: isDisabled ? tokens.opacity.disabled + 0.1 : 1
                   }
                 ]} numberOfLines={1}>
                   {playlist.name}
@@ -338,7 +338,7 @@ function getStyles(tokens: any) {
       gap: 12,
     },
     disabledPlaylistItem: {
-      opacity: 0.6,
+      // Opacity is handled inline with tokens.opacity.disabled
     },
     createNewItem: {
       borderBottomWidth: 1,

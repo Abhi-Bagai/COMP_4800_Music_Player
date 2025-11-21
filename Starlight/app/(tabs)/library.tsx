@@ -435,7 +435,6 @@ export default function HomeScreen() {
           <StarlightLogo
             width={130}
             height={25}
-            color="#C8B8FF"
           />
         </View>
         <View style={styles.headerRight}>

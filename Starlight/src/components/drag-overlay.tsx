@@ -58,7 +58,11 @@ export function DragOverlay() {
             {
               backgroundColor: tokens.colors.surface,
               borderColor: tokens.colors.primary,
-              shadowColor: tokens.colors.primary,
+              shadowColor: tokens.colors.shadow,
+              shadowOffset: tokens.shadow.offset,
+              shadowOpacity: tokens.shadow.opacity,
+              shadowRadius: tokens.shadow.radius,
+              elevation: tokens.shadow.elevation,
             },
           ]}
         >
@@ -103,13 +107,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     minWidth: 200,
     maxWidth: 250,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
     gap: 12,
   },
   iconContainer: {

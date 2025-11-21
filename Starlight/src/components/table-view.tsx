@@ -298,6 +298,11 @@ function ContextMenu({
               borderColor: tokens.colors.border,
               left: position.x,
               top: position.y,
+              shadowColor: tokens.colors.shadow,
+              shadowOffset: tokens.shadow.offset,
+              shadowOpacity: tokens.shadow.opacity,
+              shadowRadius: tokens.shadow.radius,
+              elevation: tokens.shadow.elevation,
             },
           ]}
         >
@@ -521,20 +526,20 @@ function TableRow({
 
   const rowContent = (
     <Pressable
-      style={[
+        style={[
         styles.row,
         {
           backgroundColor: isCurrentlyPlaying
-            ? tokens.colors.primary + '20' // Semi-transparent primary color for currently playing
+            ? tokens.colors.primaryMutedBg // Semi-transparent primary color for currently playing
             : isDragging
-            ? tokens.colors.primary + '30'
+            ? tokens.colors.primaryMutedBg
             : isPressed 
             ? tokens.colors.surfaceElevated 
             : isHovered 
             ? tokens.colors.surfaceElevated 
             : tokens.colors.surface,
           borderBottomColor: tokens.colors.background,
-          opacity: isDragging ? 0.5 : 1,
+          opacity: isDragging ? tokens.opacity.dragging : 1,
         },
       ]}
       onPress={isDragging ? undefined : handlePress}
@@ -1133,14 +1138,6 @@ const styles = StyleSheet.create({
     minWidth: 180,
     borderRadius: 8,
     borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
   },
   contextMenuItem: {
     paddingVertical: 12,

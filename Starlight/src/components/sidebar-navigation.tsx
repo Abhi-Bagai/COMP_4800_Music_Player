@@ -221,7 +221,7 @@ export function SidebarNavigation({
 
   return (
     <View
-      style={[styles.container, { backgroundColor: "#14151B" }]}
+      style={[styles.container, { backgroundColor: tokens.colors.sidebar }]}
     >
       {/* Search Bar */}
       <View
@@ -446,7 +446,7 @@ function SidebarPlaylistNavItem({
             styles.navItem,
             {
               backgroundColor: isHovered && isDragged
-                ? tokens.colors.primary + "20"
+                ? tokens.colors.primaryMutedBg
                 : pressed
                 ? tokens.colors.surfaceElevated
                 : "transparent",

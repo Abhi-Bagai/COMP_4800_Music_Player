@@ -352,7 +352,9 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
       ref={trackInfoRef}
       style={[
         styles.trackInfo,
-        isDraggingTrack && styles.trackInfoDragging,
+        isDraggingTrack && {
+          opacity: tokens.opacity.dragging + 0.25, // Slightly more opaque than dragging
+        },
         webDragStyles,
       ]}
     >
@@ -372,7 +374,7 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
       animationType="none"
       statusBarTranslucent={Platform.OS === 'android'}
     >
-      <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
+      <View style={[styles.overlay, { backgroundColor: tokens.colors.overlay }]}>
         <Animated.View
           style={[
             styles.container,
@@ -456,7 +458,11 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
                     { 
                       backgroundColor: tokens.colors.surface,
                       left: `${progressPercentage}%`,
-                      shadowColor: tokens.colors.text,
+                      shadowColor: tokens.colors.shadow,
+                      shadowOffset: tokens.shadow.offset,
+                      shadowOpacity: tokens.shadow.opacity,
+                      shadowRadius: tokens.shadow.radius,
+                      elevation: tokens.shadow.elevation,
                     }
                   ]}
                 >
@@ -473,9 +479,9 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
                 onSlidingStart={handleSeekStart}
                 onValueChange={handleSeekChange}
                 onSlidingComplete={handleSeek}
-                minimumTrackTintColor="#7B61FF"
-                maximumTrackTintColor="rgba(123, 97, 255, 0.15)"
-                thumbTintColor="#7B61FF"
+                minimumTrackTintColor={tokens.colors.primaryAlternate}
+                maximumTrackTintColor={tokens.colors.primaryMutedBg}
+                thumbTintColor={tokens.colors.primaryAlternate}
               />
               <View style={styles.timeLabels}>
                 <Text style={[styles.timeText, { color: tokens.colors.subtleText }]}>{formatTime(currentDisplayPosition)}</Text>
@@ -514,16 +520,16 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
 
             {/* Volume Control */}
             <View style={styles.volumeContainer}>
-              <IconSymbol name="speaker.fill" size={16} color="#A3A5B3" />
+              <IconSymbol name="speaker.fill" size={16} color={tokens.colors.iconMuted} />
               <Slider
                 style={styles.volumeSlider}
                 minimumValue={0}
                 maximumValue={100}
                 value={volume * 100}
                 onSlidingComplete={handleVolumeChange}
-                minimumTrackTintColor="#7B61FF"
-                maximumTrackTintColor="rgba(123, 97, 255, 0.15)"
-                thumbTintColor="#C678FF"
+                minimumTrackTintColor={tokens.colors.primaryAlternate}
+                maximumTrackTintColor={tokens.colors.primaryMutedBg}
+                thumbTintColor={tokens.colors.primary}
                 {...({ thumbStyle: styles.volumeThumb } as any)}
               />
               <IconSymbol name="speaker.wave.3.fill" size={16} color={tokens.colors.subtleText} />
@@ -618,9 +624,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: 'center',
   },
-  trackInfoDragging: {
-    opacity: 0.75,
-  },
 
   // Progress
   progressContainer: {
@@ -652,10 +655,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
     zIndex: 1000,
   },
   scrubTooltipText: {

@@ -207,7 +207,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
             variant="primary"
             style={[
               styles.tagButton,
-              { backgroundColor: "rgba(123, 97, 255, 0.15)" },
+              { backgroundColor: tokens.colors.primaryMutedBg },
             ]}
             onPress={(e) => {
               e?.stopPropagation?.();
@@ -218,11 +218,11 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
               <IconSymbol
                 name="tag"
                 size={12}
-                color="#C678FF"
+                color={tokens.colors.primary}
               />
               <Text
                 style={{
-                  color: "#C678FF",
+                  color: tokens.colors.primary,
                   fontSize: 12,
                   fontWeight: "600",
                   
@@ -246,7 +246,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
               <IconSymbol
                 name="shuffle"
                 size={18}
-                color="#A3A5B3"
+                color={tokens.colors.iconMuted}
               />
             </Pressable>
             <Pressable
@@ -259,14 +259,14 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
               <IconSymbol
                 name="backward.fill"
                 size={18}
-                color="#A3A5B3"
+                color={tokens.colors.iconMuted}
               />
             </Pressable>
             <Pressable style={styles.playButton} onPress={handlePlayPause}>
               <IconSymbol
                 name={isPlaying ? "pause.fill" : "play.fill"}
                 size={22}
-                color="#A3A5B3"
+                color={tokens.colors.iconMuted}
               />
             </Pressable>
             <Pressable
@@ -279,7 +279,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
               <IconSymbol
                 name="forward.fill"
                 size={18}
-                color="#A3A5B3"
+                color={tokens.colors.iconMuted}
               />
             </Pressable>
             <Pressable
@@ -288,7 +288,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
                 e.stopPropagation();
               }}
             >
-              <IconSymbol name="repeat" size={18} color="#A3A5B3" />
+              <IconSymbol name="repeat" size={18} color={tokens.colors.iconMuted} />
             </Pressable>
           </View>
 
@@ -301,14 +301,18 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
           >
             {isScrubbing && (
               <View 
-                style={[
-                  styles.scrubTooltip, 
-                  { 
-                    backgroundColor: tokens.colors.surfaceElevated,
-                    left: `${progressPercentage}%`,
-                    shadowColor: tokens.colors.text,
-                  }
-                ]}
+                  style={[
+                    styles.scrubTooltip, 
+                    { 
+                      backgroundColor: tokens.colors.surfaceElevated,
+                      left: `${progressPercentage}%`,
+                      shadowColor: tokens.colors.shadow,
+                      shadowOffset: tokens.shadow.offset,
+                      shadowOpacity: tokens.shadow.opacity,
+                      shadowRadius: tokens.shadow.radius,
+                      elevation: tokens.shadow.elevation,
+                    }
+                  ]}
               >
                 <Text style={[styles.scrubTooltipText, { color: tokens.colors.text }]}>
                   {formatScrubTime(currentDisplayPosition)}
@@ -323,7 +327,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
             <View
               style={[
                 styles.progressBar,
-                { backgroundColor: "rgba(123, 97, 255, 0.15)" },
+                { backgroundColor: tokens.colors.primaryMutedBg },
               ]}
             >
               <View
@@ -331,7 +335,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
                   styles.progressFill,
                   {
                     width: `${progressPercentage}%`,
-                    backgroundColor: "#7B61FF",
+                    backgroundColor: tokens.colors.primaryAlternate,
                   },
                 ]}
               />
@@ -349,7 +353,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
           <IconSymbol
             name="speaker.wave.2"
             size={16}
-            color="#A3A5B3"
+            color={tokens.colors.iconMuted}
           />
           <Slider
             style={styles.volumeSlider}
@@ -357,9 +361,9 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
             maximumValue={100}
             value={volume * 100}
             onSlidingComplete={handleVolumeChange}
-            minimumTrackTintColor="#7B61FF"
-            maximumTrackTintColor="rgba(123, 97, 255, 0.15)"
-            thumbTintColor="#C678FF"
+            minimumTrackTintColor={tokens.colors.primaryAlternate}
+            maximumTrackTintColor={tokens.colors.primaryMutedBg}
+            thumbTintColor={tokens.colors.primary}
             {...({ thumbStyle: styles.volumeThumb } as any)}
           />
         </View>
@@ -501,10 +505,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
     zIndex: 1000,
   },
   scrubTooltipText: {
