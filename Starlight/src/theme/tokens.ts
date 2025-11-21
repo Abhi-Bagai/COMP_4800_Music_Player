@@ -141,7 +141,7 @@ const darkColors: ThemeTokens["colors"] = {
   danger: "#F87171", // Red for destructive actions
   success: "#1ED760", // Vibrant green for success states
   overlay: "rgba(0, 0, 0, 0.4)", // Semi-transparent black for overlays
-  logo: "#C678FF", // Logo purple color
+  logo: "#C8B8FF", // Logo purple color (original color)
   sidebar: "#14151B", // Sidebar background - slightly different from surface
   shadow: "#000000", // Black for shadows
 };
