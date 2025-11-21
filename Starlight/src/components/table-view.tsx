@@ -146,7 +146,7 @@ function TableHeader({
                 <View
                   style={[
                     styles.columnDivider,
-                    { backgroundColor: tokens.colors.background },
+                    { backgroundColor: 'transparent' },
                   ]}
                 />
                 <PanGestureHandler
@@ -618,7 +618,7 @@ function TableRow({
           case "time":
             content = (
               <Text 
-                style={[styles.cellText, { color: tokens.colors.text }]}
+                style={[styles.cellText, { color: tokens.colors.subtleText }]}
                 numberOfLines={1}
               >
                 {formatDuration(track.durationMs)}
@@ -648,7 +648,7 @@ function TableRow({
           case "bpm":
             content = (
               <Text 
-                style={[styles.cellText, { color: tokens.colors.text }]}
+                style={[styles.cellText, { color: tokens.colors.subtleText }]}
                 numberOfLines={1}
               >
                 {track.bpm ?? "N/A"}
@@ -730,7 +730,7 @@ function TableRow({
               <View
                 style={[
                   styles.columnDivider,
-                  { backgroundColor: tokens.colors.background },
+                  { backgroundColor: 'transparent' },
                 ]}
               />
             )}
@@ -1058,7 +1058,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingVertical: 7,
     paddingHorizontal: 16,
-    borderBottomWidth: 2,
+    borderBottomWidth: 0,
   },
   headerCellContainer: {
     flexDirection: "row",
@@ -1098,7 +1098,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderBottomWidth: 2,
+    borderTopWidth: 1,
   },
   cell: {
     paddingHorizontal: 8,

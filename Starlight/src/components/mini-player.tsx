@@ -177,7 +177,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
   const remaining = Math.max((activeTrack.durationMs ?? 0) - currentDisplayPosition, 0);
 
   return (
-    <View
+    <Pressable
       style={[
         styles.container,
         { 
@@ -185,6 +185,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
           borderTopColor: tokens.colors.background,
         },
       ]}
+      onPress={onPress}
     >
       <View style={styles.content}>
         {/* Left Side - Track Info */}
@@ -206,24 +207,35 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
             variant="primary"
             style={[
               styles.tagButton,
-              { backgroundColor: tokens.colors.primary },
+              { backgroundColor: "rgba(123, 97, 255, 0.15)" },
             ]}
-            onPress={onTagTrack}
+            onPress={(e) => {
+              e?.stopPropagation?.();
+              onTagTrack?.();
+            }}
           >
-            <Text
-              style={{
-                color: tokens.colors.onPrimary,
-                fontSize: 12,
-                fontWeight: "600",
-              }}
-            >
-              Tag Track
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <IconSymbol
+                name="tag"
+                size={12}
+                color="#C678FF"
+              />
+              <Text
+                style={{
+                  color: "#C678FF",
+                  fontSize: 12,
+                  fontWeight: "600",
+                  
+                }}
+              >
+                Tag Track
+              </Text>
+            </View>
           </Button>
         </View>
 
         {/* Center - Progress and Controls */}
-        <View style={styles.centerSection}>
+        <View style={styles.centerSection} pointerEvents="box-none">
           <View style={styles.controls}>
             <Pressable
               style={styles.controlButton}
@@ -234,7 +246,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
               <IconSymbol
                 name="shuffle"
                 size={16}
-                color={tokens.colors.primary}
+                color="#A3A5B3"
               />
             </Pressable>
             <Pressable
@@ -247,14 +259,14 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
               <IconSymbol
                 name="backward.fill"
                 size={16}
-                color={tokens.colors.primary}
+                color="#A3A5B3"
               />
             </Pressable>
             <Pressable style={styles.playButton} onPress={handlePlayPause}>
               <IconSymbol
                 name={isPlaying ? "pause.fill" : "play.fill"}
                 size={20}
-                color={tokens.colors.primary}
+                color="#A3A5B3"
               />
             </Pressable>
             <Pressable
@@ -267,7 +279,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
               <IconSymbol
                 name="forward.fill"
                 size={16}
-                color={tokens.colors.primary}
+                color="#A3A5B3"
               />
             </Pressable>
             <Pressable
@@ -276,11 +288,17 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
                 e.stopPropagation();
               }}
             >
-              <IconSymbol name="repeat" size={16} color={tokens.colors.primary} />
+              <IconSymbol name="repeat" size={16} color="#A3A5B3" />
             </Pressable>
           </View>
 
-          <View style={styles.progressContainer} {...wheelProps as any}>
+          <Pressable
+            style={styles.progressContainer}
+            onPress={(e) => {
+              e.stopPropagation();
+            }}
+            {...wheelProps as any}
+          >
             {isScrubbing && (
               <View 
                 style={[
@@ -323,7 +341,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
             >
               -{formatTime(remaining)}
             </Text>
-          </View>
+          </Pressable>
         </View>
 
         {/* Right Side - Volume */}
@@ -345,7 +363,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
           />
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -375,6 +393,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    zIndex: 10,
   },
   trackInfoContainer: {
     flex: 1,

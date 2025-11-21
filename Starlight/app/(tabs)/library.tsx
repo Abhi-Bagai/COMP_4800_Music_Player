@@ -29,7 +29,6 @@ import { TagManager } from "@/src/components/tag-manager";
 import { DragOverlay } from "@/src/components/drag-overlay";
 import { Button } from "@/src/components/ui/button";
 import { DropdownMenu } from "@/src/components/ui/dropdown-menu";
-import { IconButton } from "@/src/components/ui/icon-button";
 import { Text } from "@/src/components/ui/text";
 import { StarlightLogo } from "@/src/components/starlight-logo";
 import { FileScanner } from "@/src/services/file-scanner";
@@ -70,6 +69,7 @@ export default function HomeScreen() {
   const [showAddMusicMenu, setShowAddMusicMenu] = useState(false);
   const [trackTags, setTrackTags] = useState<{[trackId: string]: string[]}>({});
   const [searchText, setSearchText] = useState("");
+  const [isOptionsHovered, setIsOptionsHovered] = useState(false);
 
   useEffect(() => {
     hydrateLibraryFromDatabase();
@@ -442,30 +442,23 @@ export default function HomeScreen() {
           />
         </View>
         <View style={styles.headerRight}>
-          <Button
-            size="sm"
-            variant="primary"
-            className="flex-row items-center px-3 py-1.5 rounded-md gap-1.5"
-            onPress={handlePickMusicFolders}
-          >
-            <IconSymbol
-              name="plus"
-              size={16}
-              color={tokens.colors.onPrimary}
-            />
-            <Text className="text-primary-foreground text-xs font-semibold">
-              Add Music
-            </Text>
-          </Button>
-          <IconButton
-            icon={
-              <IconSymbol name="gear" size={24} color={tokens.colors.text} />
-            }
-            accessibilityLabel="Settings"
+          <Pressable
+            style={styles.iconButton}
             onPress={() => {
               setShowGearMenu(true);
             }}
-          />
+            {...(Platform.OS === 'web' && {
+              onHoverIn: () => setIsOptionsHovered(true),
+              onHoverOut: () => setIsOptionsHovered(false),
+            })}
+            accessibilityLabel="Settings"
+          >
+            <IconSymbol 
+              name="gear" 
+              size={24} 
+              color={isOptionsHovered ? tokens.colors.text : "#A3A5B3"} 
+            />
+          </Pressable>
         </View>
       </View>
 
@@ -478,6 +471,7 @@ export default function HomeScreen() {
             currentView={sidebarView}
             onSearchChange={setSearchText}
             onPlaylistSelect={handlePlaylistPress}
+            onTrackPlay={(track) => playTrack(track)}
           />
         </View>
 
@@ -688,6 +682,26 @@ export default function HomeScreen() {
               style={[styles.menuItem, { borderBottomColor: tokens.colors.background }]}
               onPress={() => {
                 setShowGearMenu(false);
+                setShowAddMusicMenu(true);
+              }}
+            >
+              <View className="flex-row items-center">
+                <View className="w-5 items-center mr-3">
+                  <IconSymbol
+                    name="plus"
+                    size={16}
+                    color={tokens.colors.text}
+                  />
+                </View>
+                <Text className="text-foreground text-sm font-medium">
+                  Add Music
+                </Text>
+              </View>
+            </Pressable>
+            <Pressable
+              style={[styles.menuItem, { borderBottomColor: tokens.colors.background }]}
+              onPress={() => {
+                setShowGearMenu(false);
                 handleClearLibrary();
               }}
             >
@@ -818,6 +832,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
   },
   mainContent: {
     flex: 1,
