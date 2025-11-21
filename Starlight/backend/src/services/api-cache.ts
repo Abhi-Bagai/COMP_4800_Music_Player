@@ -22,7 +22,7 @@ export async function getCachedResponse<T>(key: string): Promise<T | null> {
     return null;
   }
 
-  return cached.payload as T;
+  return JSON.parse(cached.payload) as T;
 }
 
 /**
@@ -40,12 +40,12 @@ export async function setCachedResponse<T>(
     where: { key },
     create: {
       key,
-      payload: payload as any,
+      payload: JSON.stringify(payload),
       expiresAt,
       userId,
     },
     update: {
-      payload: payload as any,
+      payload: JSON.stringify(payload),
       expiresAt,
       updatedAt: new Date(),
     },

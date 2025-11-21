@@ -10,7 +10,13 @@ export const config = {
   spotify: {
     clientId: process.env.SPOTIFY_CLIENT_ID!,
     clientSecret: process.env.SPOTIFY_CLIENT_SECRET!,
-    redirectUri: process.env.SPOTIFY_REDIRECT_URI!,
+    // For local development, use http://127.0.0.1 (localhost is NOT allowed by Spotify)
+    // For production, MUST use https://
+    redirectUri:
+      process.env.SPOTIFY_REDIRECT_URI ||
+      (process.env.NODE_ENV === 'production'
+        ? 'https://your-backend-url.com/auth/spotify/callback'
+        : 'http://127.0.0.1:3001/auth/spotify/callback'),
     authUrl: 'https://accounts.spotify.com/authorize',
     tokenUrl: 'https://accounts.spotify.com/api/token',
     apiUrl: 'https://api.spotify.com/v1',
@@ -35,4 +41,24 @@ export const config = {
 // Validate required environment variables
 if (!config.spotify.clientId || !config.spotify.clientSecret) {
   throw new Error('SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET must be set');
+}
+
+// Validate redirect URI follows Spotify requirements
+const redirectUri = config.spotify.redirectUri;
+if (config.nodeEnv === 'production') {
+  // Production: Must use HTTPS
+  if (!redirectUri.startsWith('https://')) {
+    throw new Error(
+      'SPOTIFY_REDIRECT_URI must use HTTPS in production. ' +
+        'For local development, use http://127.0.0.1:PORT (localhost is not allowed).'
+    );
+  }
+} else {
+  // Development: Must use http://127.0.0.1 or http://[::1] (localhost is NOT allowed)
+  if (!redirectUri.startsWith('http://127.0.0.1') && !redirectUri.startsWith('http://[::1]')) {
+    console.warn(
+      '⚠️  Spotify does not allow "localhost" as redirect URI. ' +
+        'Use http://127.0.0.1:3001/auth/spotify/callback instead.'
+    );
+  }
 }

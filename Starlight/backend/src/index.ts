@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
 import session from 'koa-session';
@@ -59,11 +60,45 @@ app.use(testRoutes.routes()).use(testRoutes.allowedMethods());
 app.use(authRoutes.routes()).use(authRoutes.allowedMethods());
 app.use(spotifyRoutes.routes()).use(spotifyRoutes.allowedMethods());
 
-// Health check
-app.use(async (ctx) => {
+// Debug: Log all registered routes
+if (config.nodeEnv === 'development') {
+  console.log('📋 Registered routes:');
+  console.log('  - GET  /test/health');
+  console.log('  - GET  /test/db');
+  console.log('  - GET  /test/config');
+  console.log('  - GET  /auth/spotify/login');
+  console.log('  - GET  /auth/spotify/callback');
+  console.log('  - GET  /api/spotify/status');
+  console.log('  - GET  /api/spotify/playlists');
+}
+
+// Health check (must be before routes or use a specific route)
+app.use(async (ctx, next) => {
   if (ctx.path === '/health') {
     ctx.body = { status: 'ok' };
     return;
+  }
+  await next();
+});
+
+// 404 handler - catch all unmatched routes
+app.use(async (ctx) => {
+  if (ctx.status === 404) {
+    ctx.status = 404;
+    ctx.body = {
+      error: 'Route not found',
+      path: ctx.path,
+      method: ctx.method,
+      availableRoutes: [
+        'GET /test/health',
+        'GET /test/db',
+        'GET /test/config',
+        'GET /auth/spotify/login',
+        'GET /auth/spotify/callback',
+        'GET /api/spotify/status',
+        'GET /api/spotify/playlists',
+      ],
+    };
   }
 });
 

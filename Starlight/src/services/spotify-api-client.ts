@@ -5,8 +5,8 @@
  * Spotify endpoints. All Spotify API calls go through the backend.
  */
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
-
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8081';
+// console.log(API_BASE_URL);
 /**
  * Spotify connection status
  */

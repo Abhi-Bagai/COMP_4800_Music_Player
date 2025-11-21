@@ -7,6 +7,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+  url      = "file:./starlight.db"
 }
 
 // User model - represents a Starlight user
@@ -49,7 +50,7 @@ model SpotifyAccount {
 model ApiCache {
   id        String   @id @default(cuid())
   key       String   @unique // Format: "spotify:{userId}:{resource}:{resourceId}"
-  payload   Json     // Cached response payload
+  payload   String   // Cached response payload (JSON string)
   expiresAt DateTime // Cache expiration time
   userId    String   // For easy cleanup per user
   createdAt DateTime @default(now())

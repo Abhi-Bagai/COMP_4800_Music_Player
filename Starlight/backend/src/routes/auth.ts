@@ -6,14 +6,36 @@ import { getCurrentUserId } from '../middleware/auth';
 import { generatePKCE, generateRandomString } from '../utils/crypto';
 import { exchangeCodeForToken, fetchSpotifyUserProfile } from '../utils/spotify-api';
 
-const router = new Router();
+const router = new Router({ prefix: '/auth' });
 
 /**
  * GET /auth/spotify/login
  * Initiates Spotify OAuth flow with PKCE
  */
 router.get('/spotify/login', async (ctx: Context) => {
-  const userId = getCurrentUserId(ctx);
+  // For OAuth login, we don't require authentication yet
+  // Create or get a user ID from session, or create a temporary one
+  let userId = ctx.state.user?.id;
+
+  if (!userId) {
+    // Create a temporary user ID from session or generate one
+    if (!ctx.session?.userId) {
+      // Generate a temporary user ID (in production, you'd create a real user)
+      const tempUserId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      ctx.session!.userId = tempUserId;
+
+      // Create a user in the database if it doesn't exist
+      await prisma.user.upsert({
+        where: { id: tempUserId },
+        create: {
+          id: tempUserId,
+          email: `temp_${tempUserId}@starlight.local`,
+        },
+        update: {},
+      });
+    }
+    userId = ctx.session!.userId as string;
+  }
 
   // Generate PKCE parameters
   const { codeVerifier, codeChallenge } = generatePKCE();
