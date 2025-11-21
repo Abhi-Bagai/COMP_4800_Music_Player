@@ -1,6 +1,5 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { MiniPlayer } from '@/src/components/mini-player';
-import { NowPlaying } from '@/src/components/now-playing';
 import { Button } from '@/src/components/ui/button';
 import { IconButton } from '@/src/components/ui/icon-button';
 import type { PlaylistWithTracks } from '@/src/db/playlist-repository';
@@ -41,7 +40,6 @@ export function PlaylistDetailScreen({
   const { activeTrack, isPlaying } = usePlayerStore();
   const [playlist, setPlaylist] = useState<PlaylistWithTracks | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showNowPlaying, setShowNowPlaying] = useState(false);
 
   useEffect(() => {
     loadPlaylistDetails();
@@ -354,10 +352,8 @@ export function PlaylistDetailScreen({
       </View>
 
       {activeTrack && (
-        <MiniPlayer onPress={() => setShowNowPlaying(true)} />
+        <MiniPlayer onPress={() => {}} />
       )}
-
-      <NowPlaying visible={showNowPlaying} onClose={() => setShowNowPlaying(false)} />
     </SafeAreaView>
   );
 }

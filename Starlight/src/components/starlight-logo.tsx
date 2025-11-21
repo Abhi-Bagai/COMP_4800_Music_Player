@@ -11,7 +11,7 @@ interface StarlightLogoProps {
 export function StarlightLogo({ 
   width = 130, 
   height = 25, 
-  color = '#C678FF' // Vibrant purple to match new theme 
+  color = '#C8B8FF' // Vibrant purple to match new theme 
 }: StarlightLogoProps) {
   return (
     <View style={{ width, height }}>

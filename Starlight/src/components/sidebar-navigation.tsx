@@ -40,11 +40,6 @@ const navigationItems: NavigationItem[] = [
     icon: "music.note.list",
   },
   {
-    id: "now-playing",
-    label: "Now Playing",
-    icon: "play.fill",
-  },
-  {
     id: "artists",
     label: "Artists",
     icon: "mic",

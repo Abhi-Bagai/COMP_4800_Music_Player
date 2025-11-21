@@ -19,8 +19,6 @@ import { AlbumsScreen } from "@/src/components/albums-screen";
 import { ArtistsScreen } from "@/src/components/artists-screen";
 import { PlaylistsScreen } from "@/src/components/playlists-screen";
 import { MiniPlayer } from "@/src/components/mini-player";
-import { NowPlaying } from "@/src/components/now-playing";
-import NowPlayingScreen from "./now-playing";
 import { PlaylistCreationModal } from "@/src/components/playlist-creation-modal";
 import { PlaylistDetailScreen } from "@/src/components/playlist-detail-screen";
 import { SidebarNavigation } from "@/src/components/sidebar-navigation";
@@ -50,7 +48,6 @@ export default function HomeScreen() {
   const { tracks, isLoading } = useLibraryStore();
   const { activeTrack } = usePlayerStore();
   const { playlists } = usePlaylistStore();
-  const [showNowPlaying, setShowNowPlaying] = useState(false);
   const [showPlaylistCreation, setShowPlaylistCreation] = useState(false);
   const [showAddToPlaylist, setShowAddToPlaylist] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState<any>(null);
@@ -438,7 +435,7 @@ export default function HomeScreen() {
           <StarlightLogo
             width={130}
             height={25}
-            color={tokens.colors.primary}
+            color="#C8B8FF"
           />
         </View>
         <View style={styles.headerRight}>
@@ -560,8 +557,6 @@ export default function HomeScreen() {
                 </Button>
               </View>
             )
-          ) : sidebarView === "now-playing" ? (
-            <NowPlayingScreen />
           ) : sidebarView === "artists" ? (
             <ArtistsScreen onBack={() => setSidebarView("library")} />
           ) : sidebarView === "albums" ? (
@@ -590,19 +585,13 @@ export default function HomeScreen() {
       {/* Mini Player */}
       {activeTrack && (
         <MiniPlayer
-          onPress={() => setShowNowPlaying(true)}
+          onPress={() => {}}
           onTagTrack={() => {
             setSelectedTrackForTagging(activeTrack);
             setShowTagManager(true);
           }}
         />
       )}
-
-      {/* Now Playing Modal */}
-      <NowPlaying
-        visible={showNowPlaying}
-        onClose={() => setShowNowPlaying(false)}
-      />
 
       {/* Playlist Creation Modal */}
       <PlaylistCreationModal

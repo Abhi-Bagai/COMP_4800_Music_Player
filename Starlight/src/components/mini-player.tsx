@@ -245,7 +245,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
             >
               <IconSymbol
                 name="shuffle"
-                size={16}
+                size={18}
                 color="#A3A5B3"
               />
             </Pressable>
@@ -258,14 +258,14 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
             >
               <IconSymbol
                 name="backward.fill"
-                size={16}
+                size={18}
                 color="#A3A5B3"
               />
             </Pressable>
             <Pressable style={styles.playButton} onPress={handlePlayPause}>
               <IconSymbol
                 name={isPlaying ? "pause.fill" : "play.fill"}
-                size={20}
+                size={22}
                 color="#A3A5B3"
               />
             </Pressable>
@@ -278,7 +278,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
             >
               <IconSymbol
                 name="forward.fill"
-                size={16}
+                size={18}
                 color="#A3A5B3"
               />
             </Pressable>
@@ -288,7 +288,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
                 e.stopPropagation();
               }}
             >
-              <IconSymbol name="repeat" size={16} color="#A3A5B3" />
+              <IconSymbol name="repeat" size={18} color="#A3A5B3" />
             </Pressable>
           </View>
 
@@ -323,7 +323,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
             <View
               style={[
                 styles.progressBar,
-                { backgroundColor: tokens.colors.surface },
+                { backgroundColor: "rgba(123, 97, 255, 0.15)" },
               ]}
             >
               <View
@@ -331,7 +331,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
                   styles.progressFill,
                   {
                     width: `${progressPercentage}%`,
-                    backgroundColor: tokens.colors.primary,
+                    backgroundColor: "#7B61FF",
                   },
                 ]}
               />
@@ -349,7 +349,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
           <IconSymbol
             name="speaker.wave.2"
             size={16}
-            color={tokens.colors.primary}
+            color="#A3A5B3"
           />
           <Slider
             style={styles.volumeSlider}
@@ -357,9 +357,10 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
             maximumValue={100}
             value={volume * 100}
             onSlidingComplete={handleVolumeChange}
-            minimumTrackTintColor={tokens.colors.primary}
-            maximumTrackTintColor={tokens.colors.surface}
-            thumbTintColor={tokens.colors.primary}
+            minimumTrackTintColor="#7B61FF"
+            maximumTrackTintColor="rgba(123, 97, 255, 0.15)"
+            thumbTintColor="#C678FF"
+            {...({ thumbStyle: styles.volumeThumb } as any)}
           />
         </View>
       </View>
@@ -426,6 +427,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: -20,
     right: -20,
+    top: 0,
+    bottom: 0,
     alignItems: "center",
     gap: 0,
   },
@@ -435,7 +438,8 @@ const styles = StyleSheet.create({
     width: 280,
     height: 20,
     gap: 12,
-    position: "relative",
+    position: "absolute",
+    bottom: 6,
   },
   timeText: {
     fontSize: 12,
@@ -456,6 +460,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     height: 20,
+    marginTop: 14,
   },
   controlButton: {
     width: 24,
@@ -472,14 +477,22 @@ const styles = StyleSheet.create({
   rightSection: {
     position: "absolute",
     right: 20,
+    top: 0,
+    bottom: 0,
     width: 120,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   volumeSlider: {
     flex: 1,
     height: 20,
+  },
+  volumeThumb: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
   scrubTooltip: {
     position: "absolute",

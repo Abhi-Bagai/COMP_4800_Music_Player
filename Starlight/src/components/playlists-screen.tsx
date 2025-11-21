@@ -1,6 +1,5 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { MiniPlayer } from '@/src/components/mini-player';
-import { NowPlaying } from '@/src/components/now-playing';
 import { DragOverlay } from '@/src/components/drag-overlay';
 import { PlaylistCreationModal } from '@/src/components/playlist-creation-modal';
 import { Button } from '@/src/components/ui/button';
@@ -144,7 +143,6 @@ export function PlaylistsScreen({ onPlaylistPress }: PlaylistsScreenProps) {
   const { activeTrack } = usePlayerStore();
   const { playlists, isLoading } = usePlaylistStore();
   const { draggedTrack, hoveredPlaylistId, setHoveredPlaylistId, setDraggedTrack, setDragPosition } = useDrag();
-  const [showNowPlaying, setShowNowPlaying] = useState(false);
   const [showPlaylistCreation, setShowPlaylistCreation] = useState(false);
   const [playlistRefs, setPlaylistRefs] = useState<Record<string, any>>({});
 
@@ -380,11 +378,8 @@ export function PlaylistsScreen({ onPlaylistPress }: PlaylistsScreenProps) {
 
       {/* Mini Player */}
       {activeTrack && (
-        <MiniPlayer onPress={() => setShowNowPlaying(true)} />
+        <MiniPlayer onPress={() => {}} />
       )}
-
-      {/* Now Playing Modal */}
-      <NowPlaying visible={showNowPlaying} onClose={() => setShowNowPlaying(false)} />
 
       {/* Playlist Creation Modal */}
       <PlaylistCreationModal

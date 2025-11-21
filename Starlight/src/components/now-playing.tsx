@@ -473,9 +473,9 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
                 onSlidingStart={handleSeekStart}
                 onValueChange={handleSeekChange}
                 onSlidingComplete={handleSeek}
-                minimumTrackTintColor={tokens.colors.primary}
-                maximumTrackTintColor={tokens.colors.surfaceElevated}
-                thumbTintColor={tokens.colors.primary}
+                minimumTrackTintColor="#7B61FF"
+                maximumTrackTintColor="rgba(123, 97, 255, 0.15)"
+                thumbTintColor="#7B61FF"
               />
               <View style={styles.timeLabels}>
                 <Text style={[styles.timeText, { color: tokens.colors.subtleText }]}>{formatTime(currentDisplayPosition)}</Text>
@@ -514,16 +514,17 @@ export function NowPlaying({ visible, onClose }: NowPlayingProps) {
 
             {/* Volume Control */}
             <View style={styles.volumeContainer}>
-              <IconSymbol name="speaker.fill" size={16} color={tokens.colors.subtleText} />
+              <IconSymbol name="speaker.fill" size={16} color="#A3A5B3" />
               <Slider
                 style={styles.volumeSlider}
                 minimumValue={0}
                 maximumValue={100}
                 value={volume * 100}
                 onSlidingComplete={handleVolumeChange}
-                minimumTrackTintColor={tokens.colors.primary}
-                maximumTrackTintColor={tokens.colors.surfaceElevated}
-                thumbTintColor={tokens.colors.primary}
+                minimumTrackTintColor="#7B61FF"
+                maximumTrackTintColor="rgba(123, 97, 255, 0.15)"
+                thumbTintColor="#C678FF"
+                {...({ thumbStyle: styles.volumeThumb } as any)}
               />
               <IconSymbol name="speaker.wave.3.fill" size={16} color={tokens.colors.subtleText} />
             </View>
@@ -691,9 +692,9 @@ const styles = StyleSheet.create({
     height: 40,
   },
   volumeThumb: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
 
   // Bottom Actions
