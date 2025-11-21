@@ -10,8 +10,8 @@ interface StarlightLogoProps {
 }
 
 export function StarlightLogo({ 
-  width = 130, 
-  height = 25, 
+  width = 100, 
+  height = 19, 
   color,
 }: StarlightLogoProps) {
   const { tokens } = useTheme();

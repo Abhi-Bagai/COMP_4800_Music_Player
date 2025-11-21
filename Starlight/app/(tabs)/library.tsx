@@ -432,10 +432,7 @@ export default function HomeScreen() {
         borderBottomColor: tokens.colors.background 
       }]}>
         <View style={styles.headerCenter}>
-          <StarlightLogo
-            width={130}
-            height={25}
-          />
+          <StarlightLogo />
         </View>
         <View style={styles.headerRight}>
           <Pressable
@@ -451,8 +448,8 @@ export default function HomeScreen() {
           >
             <IconSymbol 
               name="gear" 
-              size={24} 
-              color={isOptionsHovered ? tokens.colors.text : "#A3A5B3"} 
+              size={18} 
+              color={isOptionsHovered ? tokens.colors.text : tokens.colors.iconMuted} 
             />
           </Pressable>
         </View>
