@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
   progressContainer: {
     flexDirection: "row",
     alignItems: "center",
-    width: 280,
+    width: 360,
     height: 20,
     gap: 12,
     position: "absolute",
