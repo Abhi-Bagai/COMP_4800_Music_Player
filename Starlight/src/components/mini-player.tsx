@@ -190,6 +190,10 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
       <View style={styles.content}>
         {/* Left Side - Track Info */}
         <View style={styles.leftSection}>
+          {/* Track Icon Square */}
+          <View style={[styles.albumArt, { backgroundColor: tokens.colors.surfaceElevated }]}>
+            <IconSymbol name="music.note" size={20} color={tokens.colors.subtleText} />
+          </View>
           <View style={styles.trackInfoContainer}>
             <ScrollingText
               text={activeTrack.title}
@@ -393,12 +397,20 @@ const styles = StyleSheet.create({
   },
   leftSection: {
     position: "absolute",
-    left: 20,
+    left: 10,
     width: 280,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
     zIndex: 10,
+  },
+  albumArt: {
+    width: 48,
+    height: 48,
+    borderRadius: 6,
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
   },
   trackInfoContainer: {
     flex: 1,
@@ -480,7 +492,7 @@ const styles = StyleSheet.create({
   },
   rightSection: {
     position: "absolute",
-    right: 20,
+    right: 10,
     top: 0,
     bottom: 0,
     width: 120,
