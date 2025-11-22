@@ -7,7 +7,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./starlight.db"
+  url      = "file:./prisma/starlight.db"
 }
 
 // User model - represents a Starlight user
