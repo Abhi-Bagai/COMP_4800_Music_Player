@@ -67,7 +67,8 @@ function ScrollingText({ text, style, maxWidth }: ScrollingTextProps) {
       
       if (actualTextWidth > maxWidth) {
         // Calculate scroll distance needed to show hidden text with small buffer
-        const scrollDistance = Math.max(actualTextWidth - maxWidth + 8, 0);
+        // This should be replaced with a more accurate calculation later
+        const scrollDistance = Math.max(actualTextWidth - maxWidth - 12, 0);
         
         // Calculate duration based on consistent scroll speed (30 pixels per second)
         const scrollSpeed = 30;
@@ -398,7 +399,7 @@ const styles = StyleSheet.create({
   leftSection: {
     position: "absolute",
     left: 10,
-    width: 280,
+    width: 340,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -422,7 +423,7 @@ const styles = StyleSheet.create({
     flexWrap: 'nowrap',
   },
   trackTitle: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "600",
     flexWrap: 'nowrap',
     flexShrink: 0,
