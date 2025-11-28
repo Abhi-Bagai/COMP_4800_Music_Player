@@ -8,6 +8,7 @@ import {
 } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { Folder } from "lucide-react-native";
 import { Text } from "@/src/components/ui/text";
 import { usePlaylistStore } from "@/src/state/playlist-store";
 import { useLibraryStore } from "@/src/state/library-store";
@@ -37,27 +38,27 @@ const navigationItems: NavigationItem[] = [
   {
     id: "library",
     label: "Library",
-    icon: "music.note.list",
+    icon: "folder",
   },
   {
     id: "artists",
     label: "Artists",
-    icon: "mic",
+    icon: "folder",
   },
   {
     id: "albums",
     label: "Albums",
-    icon: "opticaldisc",
+    icon: "folder",
   },
   {
     id: "playlists",
     label: "Playlists",
-    icon: "music.note.list",
+    icon: "folder",
   },
   {
     id: "genres",
     label: "Genres",
-    icon: "pianokeys",
+    icon: "folder",
   },
 ];
 
@@ -152,11 +153,18 @@ export function SidebarNavigation({
           onPress={handleItemClick}
         >
           <View style={[styles.navItemContent, styles.mainNavItemContent]}>
-            <IconSymbol
-              name={item.icon as any}
-              size={16}
-              color={tokens.colors.text}
-            />
+            {item.icon === "folder" ? (
+              <Folder
+                size={16}
+                color={tokens.colors.text}
+              />
+            ) : (
+              <IconSymbol
+                name={item.icon as any}
+                size={16}
+                color={tokens.colors.text}
+              />
+            )}
             <Text
               style={[
                 styles.navItemText,
