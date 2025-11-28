@@ -17,26 +17,13 @@ function setupStatusUpdates(player: ReturnType<typeof useAudioPlayer>) {
     try {
       const isPlaying = !!player.playing;
       const rawCurrentTime = player.currentTime; // seconds
-      const rawDuration = player.duration; // seconds
 
       const safeCurrentTimeSec = Number.isFinite(rawCurrentTime) && rawCurrentTime >= 0 ? rawCurrentTime : 0;
-      const safeDurationSec = Number.isFinite(rawDuration) && rawDuration > 0 ? rawDuration : 0;
 
       usePlayerStore.getState().setPlaybackStatus({
         isPlaying,
         positionMs: Math.max(0, Math.floor(safeCurrentTimeSec * 1000)),
       });
-
-      // Update track duration if we don't have it
-      const currentTrack = usePlayerStore.getState().activeTrack;
-      if (currentTrack && (!currentTrack.durationMs || !Number.isFinite(currentTrack.durationMs))) {
-        if (safeDurationSec > 0) {
-          usePlayerStore.getState().setActiveTrack({
-            ...currentTrack,
-            durationMs: Math.floor(safeDurationSec * 1000),
-          });
-        }
-      }
     } catch (error) {
       console.warn('Error updating playback status:', error);
     }

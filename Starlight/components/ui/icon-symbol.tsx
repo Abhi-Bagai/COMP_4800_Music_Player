@@ -48,6 +48,17 @@ const MAPPING = {
   // Repeat icons
   'repeat': 'repeat',
   'repeat.1': 'repeat-one',
+  
+  // Tag and label icons
+  'tag': 'local-offer',
+  'plus.circle': 'add-circle',
+  'list.bullet': 'list',
+  'checkmark': 'check',
+  
+  // Speaker/Volume icons
+  'speaker.fill': 'volume-up',
+  'speaker.wave.2': 'volume-up',
+  'speaker.wave.3.fill': 'volume-up',
 } as IconMapping;
 
 /**

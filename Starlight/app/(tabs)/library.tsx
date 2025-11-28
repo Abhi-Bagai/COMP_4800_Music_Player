@@ -3,29 +3,26 @@ import { Alert, FlatList, Modal, Platform, Pressable, StyleSheet, View } from 'r
 import { PanGestureHandler, Swipeable } from 'react-native-gesture-handler';
 import * as DocumentPicker from 'expo-document-picker';
 
-import { useTheme } from '@/src/theme/provider';
+import { useTheme } from "@/src/theme/provider";
 
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { AddToPlaylistModal } from '@/src/components/add-to-playlist-modal';
-import { AlbumsScreen } from '@/src/components/albums-screen';
-import { ArtistsScreen } from '@/src/components/artists-screen';
-import { PlaylistsScreen } from '@/src/components/playlists-screen';
-import { SpotifyPlaylistImportScreen } from '@/src/components/spotify-playlist-import-screen';
-import { MiniPlayer } from '@/src/components/mini-player';
-import { NowPlaying } from '@/src/components/now-playing';
-import NowPlayingScreen from './now-playing';
-import { PlaylistCreationModal } from '@/src/components/playlist-creation-modal';
-import { PlaylistDetailScreen } from '@/src/components/playlist-detail-screen';
-import { SidebarNavigation } from '@/src/components/sidebar-navigation';
-import { TableView } from '@/src/components/table-view';
-import { TagManager } from '@/src/components/tag-manager';
-import { DragOverlay } from '@/src/components/drag-overlay';
-import { Button } from '@/src/components/ui/button';
-import { DropdownMenu } from '@/src/components/ui/dropdown-menu';
-import { IconButton } from '@/src/components/ui/icon-button';
-import { Text } from '@/src/components/ui/text';
-import { StarlightLogo } from '@/src/components/starlight-logo';
-import { FileScanner } from '@/src/services/file-scanner';
+import { IconSymbol } from "@/components/ui/icon-symbol";
+import { Settings } from "lucide-react-native";
+import { AddToPlaylistModal } from "@/src/components/add-to-playlist-modal";
+import { AlbumsScreen } from "@/src/components/albums-screen";
+import { ArtistsScreen } from "@/src/components/artists-screen";
+import { PlaylistsScreen } from "@/src/components/playlists-screen";
+import { MiniPlayer } from "@/src/components/mini-player";
+import { PlaylistCreationModal } from "@/src/components/playlist-creation-modal";
+import { PlaylistDetailScreen } from "@/src/components/playlist-detail-screen";
+import { SidebarNavigation } from "@/src/components/sidebar-navigation";
+import { TableView } from "@/src/components/table-view";
+import { TagManager } from "@/src/components/tag-manager";
+import { DragOverlay } from "@/src/components/drag-overlay";
+import { Button } from "@/src/components/ui/button";
+import { DropdownMenu } from "@/src/components/ui/dropdown-menu";
+import { Text } from "@/src/components/ui/text";
+import { StarlightLogo } from "@/src/components/starlight-logo";
+import { FileScanner } from "@/src/services/file-scanner";
 import {
   clearLibrary,
   deleteTrack,
@@ -44,7 +41,6 @@ export default function HomeScreen() {
   const { tracks, isLoading } = useLibraryStore();
   const { activeTrack } = usePlayerStore();
   const { playlists } = usePlaylistStore();
-  const [showNowPlaying, setShowNowPlaying] = useState(false);
   const [showPlaylistCreation, setShowPlaylistCreation] = useState(false);
   const [showAddToPlaylist, setShowAddToPlaylist] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState<any>(null);
@@ -56,8 +52,9 @@ export default function HomeScreen() {
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [showGearMenu, setShowGearMenu] = useState(false);
   const [showAddMusicMenu, setShowAddMusicMenu] = useState(false);
-  const [trackTags, setTrackTags] = useState<{ [trackId: string]: string[] }>({});
-  const [searchText, setSearchText] = useState('');
+  const [trackTags, setTrackTags] = useState<{[trackId: string]: string[]}>({});
+  const [searchText, setSearchText] = useState("");
+  const [isOptionsHovered, setIsOptionsHovered] = useState(false);
 
   useEffect(() => {
     hydrateLibraryFromDatabase();
@@ -430,24 +427,25 @@ export default function HomeScreen() {
           },
         ]}>
         <View style={styles.headerCenter}>
-          <StarlightLogo width={130} height={25} color={tokens.colors.primary} />
+          <StarlightLogo />
         </View>
         <View style={styles.headerRight}>
-          <Button
-            size="sm"
-            variant="primary"
-            className="flex-row items-center gap-1.5 rounded-md px-3 py-1.5"
-            onPress={handlePickMusicFolders}>
-            <IconSymbol name="plus" size={16} color={tokens.colors.onPrimary} />
-            <Text className="text-xs font-semibold text-primary-foreground">Add Music</Text>
-          </Button>
-          <IconButton
-            icon={<IconSymbol name="gear" size={24} color={tokens.colors.text} />}
-            accessibilityLabel="Settings"
+          <Pressable
+            style={styles.iconButton}
             onPress={() => {
               setShowGearMenu(true);
             }}
-          />
+            {...(Platform.OS === 'web' && {
+              onHoverIn: () => setIsOptionsHovered(true),
+              onHoverOut: () => setIsOptionsHovered(false),
+            })}
+            accessibilityLabel="Settings"
+          >
+            <Settings 
+              size={18} 
+              color={isOptionsHovered ? tokens.colors.text : tokens.colors.iconMuted} 
+            />
+          </Pressable>
         </View>
       </View>
 
@@ -460,6 +458,7 @@ export default function HomeScreen() {
             currentView={sidebarView}
             onSearchChange={setSearchText}
             onPlaylistSelect={handlePlaylistPress}
+            onTrackPlay={(track) => playTrack(track)}
           />
         </View>
 
@@ -536,13 +535,11 @@ export default function HomeScreen() {
                 </Button>
               </View>
             )
-          ) : sidebarView === 'now-playing' ? (
-            <NowPlayingScreen />
-          ) : sidebarView === 'artists' ? (
-            <ArtistsScreen onBack={() => setSidebarView('library')} />
-          ) : sidebarView === 'albums' ? (
-            <AlbumsScreen onBack={() => setSidebarView('library')} />
-          ) : sidebarView === 'playlists' ? (
+          ) : sidebarView === "artists" ? (
+            <ArtistsScreen onBack={() => setSidebarView("library")} />
+          ) : sidebarView === "albums" ? (
+            <AlbumsScreen onBack={() => setSidebarView("library")} />
+          ) : sidebarView === "playlists" ? (
             <PlaylistsScreen onPlaylistPress={handlePlaylistPress} />
           ) : sidebarView === 'spotify-playlists' ? (
             <SpotifyPlaylistImportScreen onBack={() => setSidebarView('library')} />
@@ -568,16 +565,13 @@ export default function HomeScreen() {
       {/* Mini Player */}
       {activeTrack && (
         <MiniPlayer
-          onPress={() => setShowNowPlaying(true)}
+          onPress={() => {}}
           onTagTrack={() => {
             setSelectedTrackForTagging(activeTrack);
             setShowTagManager(true);
           }}
         />
       )}
-
-      {/* Now Playing Modal */}
-      <NowPlaying visible={showNowPlaying} onClose={() => setShowNowPlaying(false)} />
 
       {/* Playlist Creation Modal */}
       <PlaylistCreationModal
@@ -655,6 +649,26 @@ export default function HomeScreen() {
                 borderColor: tokens.colors.border,
               },
             ]}>
+            <Pressable
+              style={[styles.menuItem, { borderBottomColor: tokens.colors.background }]}
+              onPress={() => {
+                setShowGearMenu(false);
+                setShowAddMusicMenu(true);
+              }}
+            >
+              <View className="flex-row items-center">
+                <View className="w-5 items-center mr-3">
+                  <IconSymbol
+                    name="plus"
+                    size={16}
+                    color={tokens.colors.text}
+                  />
+                </View>
+                <Text className="text-foreground text-sm font-medium">
+                  Add Music
+                </Text>
+              </View>
+            </Pressable>
             <Pressable
               style={[styles.menuItem, { borderBottomColor: tokens.colors.background }]}
               onPress={() => {
@@ -767,6 +781,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
   },
   mainContent: {
     flex: 1,

@@ -306,6 +306,16 @@ export async function idbUpdateTrackFileUri(trackId: string, fileUri: string) {
   });
 }
 
+export async function idbUpdateTrackDuration(trackId: string, durationMs: number) {
+  await withStores(['tracks'], 'readwrite', async ({ tracks }) => {
+    const record = await requestToPromise<any | undefined>(tracks.get(trackId));
+    if (!record) return;
+    record.duration_ms = durationMs;
+    record.updated_at = now();
+    await requestToPromise(tracks.put(record));
+  });
+}
+
 export async function idbClearLibrary() {
   await withStores(
     ['playlist_tracks', 'playlists', 'playback_state', 'tracks', 'albums', 'artists'],

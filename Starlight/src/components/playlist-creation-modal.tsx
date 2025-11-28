@@ -152,7 +152,7 @@ function Content({
         <Pressable
           style={[
             styles.createButton,
-            (!name.trim() || isCreating) && styles.createButtonDisabled
+            (!name.trim() || isCreating) && { opacity: tokens.opacity.disabled }
           ]}
           onPress={onCreate}
           disabled={!name.trim() || isCreating}
@@ -243,9 +243,6 @@ function getStyles(tokens: any) {
     },
     createButton: {
       padding: 8,
-    },
-    createButtonDisabled: {
-      opacity: 0.5,
     },
     createButtonText: {
       fontSize: 16,

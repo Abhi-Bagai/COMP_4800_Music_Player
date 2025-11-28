@@ -2,7 +2,7 @@ import Slider from '@react-native-community/slider';
 import React, { useEffect, useRef } from "react";
 import { Pressable, StyleSheet, View, Animated, Dimensions } from "react-native";
 
-import { IconSymbol } from "@/components/ui/icon-symbol";
+import { Play, Pause, FastForward, Rewind, Volume2, Shuffle, Repeat, Tag, Music } from "lucide-react-native";
 import { Button } from "@/src/components/ui/button";
 import { Text } from "@/src/components/ui/text";
 import { useTrackScrubbing } from "@/src/hooks/use-track-scrubbing";
@@ -67,7 +67,8 @@ function ScrollingText({ text, style, maxWidth }: ScrollingTextProps) {
       
       if (actualTextWidth > maxWidth) {
         // Calculate scroll distance needed to show hidden text with small buffer
-        const scrollDistance = Math.max(actualTextWidth - maxWidth + 8, 0);
+        // This should be replaced with a more accurate calculation later
+        const scrollDistance = Math.max(actualTextWidth - maxWidth - 12, 0);
         
         // Calculate duration based on consistent scroll speed (30 pixels per second)
         const scrollSpeed = 30;
@@ -177,7 +178,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
   const remaining = Math.max((activeTrack.durationMs ?? 0) - currentDisplayPosition, 0);
 
   return (
-    <View
+    <Pressable
       style={[
         styles.container,
         { 
@@ -185,10 +186,15 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
           borderTopColor: tokens.colors.background,
         },
       ]}
+      onPress={onPress}
     >
       <View style={styles.content}>
         {/* Left Side - Track Info */}
         <View style={styles.leftSection}>
+          {/* Track Icon Square */}
+          <View style={[styles.albumArt, { backgroundColor: tokens.colors.surfaceElevated }]}>
+            <Music size={20} color={tokens.colors.subtleText} />
+          </View>
           <View style={styles.trackInfoContainer}>
             <ScrollingText
               text={activeTrack.title}
@@ -206,35 +212,114 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
             variant="primary"
             style={[
               styles.tagButton,
-              { backgroundColor: tokens.colors.primary },
+              { backgroundColor: tokens.colors.primaryMutedBg },
             ]}
-            onPress={onTagTrack}
+            onPress={(e) => {
+              e?.stopPropagation?.();
+              onTagTrack?.();
+            }}
           >
-            <Text
-              style={{
-                color: tokens.colors.onPrimary,
-                fontSize: 12,
-                fontWeight: "600",
-              }}
-            >
-              Tag Track
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Tag
+                size={12}
+                color={tokens.colors.primary}
+              />
+              <Text
+                style={{
+                  color: tokens.colors.primary,
+                  fontSize: 12,
+                  fontWeight: "600",
+                  
+                }}
+              >
+                Tag Track
+              </Text>
+            </View>
           </Button>
         </View>
 
         {/* Center - Progress and Controls */}
-        <View style={styles.centerSection}>
-          <View style={styles.progressContainer} {...wheelProps as any}>
+        <View style={styles.centerSection} pointerEvents="box-none">
+          <View style={styles.controls}>
+            <Pressable
+              style={styles.controlButton}
+              onPress={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              <Shuffle
+                size={18}
+                color={tokens.colors.iconMuted}
+              />
+            </Pressable>
+            <Pressable
+              style={styles.controlButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                skipPrevious();
+              }}
+            >
+              <Rewind
+                size={18}
+                color={tokens.colors.iconMuted}
+              />
+            </Pressable>
+            <Pressable style={styles.playButton} onPress={handlePlayPause}>
+              {isPlaying ? (
+                <Pause
+                  size={18}
+                  color={tokens.colors.iconMuted}
+                />
+              ) : (
+                <Play
+                  size={18}
+                  color={tokens.colors.iconMuted}
+                />
+              )}
+            </Pressable>
+            <Pressable
+              style={styles.controlButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                skipNext();
+              }}
+            >
+              <FastForward
+                size={18}
+                color={tokens.colors.iconMuted}
+              />
+            </Pressable>
+            <Pressable
+              style={styles.controlButton}
+              onPress={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              <Repeat size={18} color={tokens.colors.iconMuted} />
+            </Pressable>
+          </View>
+
+          <Pressable
+            style={styles.progressContainer}
+            onPress={(e) => {
+              e.stopPropagation();
+            }}
+            {...wheelProps as any}
+          >
             {isScrubbing && (
               <View 
-                style={[
-                  styles.scrubTooltip, 
-                  { 
-                    backgroundColor: tokens.colors.surfaceElevated,
-                    left: `${progressPercentage}%`,
-                    shadowColor: tokens.colors.text,
-                  }
-                ]}
+                  style={[
+                    styles.scrubTooltip, 
+                    { 
+                      backgroundColor: tokens.colors.surfaceElevated,
+                      left: `${progressPercentage}%`,
+                      shadowColor: tokens.colors.shadow,
+                      shadowOffset: tokens.shadow.offset,
+                      shadowOpacity: tokens.shadow.opacity,
+                      shadowRadius: tokens.shadow.radius,
+                      elevation: tokens.shadow.elevation,
+                    }
+                  ]}
               >
                 <Text style={[styles.scrubTooltipText, { color: tokens.colors.text }]}>
                   {formatScrubTime(currentDisplayPosition)}
@@ -249,7 +334,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
             <View
               style={[
                 styles.progressBar,
-                { backgroundColor: tokens.colors.surface },
+                { backgroundColor: tokens.colors.primaryMutedBg },
               ]}
             >
               <View
@@ -257,7 +342,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
                   styles.progressFill,
                   {
                     width: `${progressPercentage}%`,
-                    backgroundColor: tokens.colors.primary,
+                    backgroundColor: tokens.colors.primaryAlternate,
                   },
                 ]}
               />
@@ -267,71 +352,14 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
             >
               -{formatTime(remaining)}
             </Text>
-          </View>
-
-          <View style={styles.controls}>
-            <Pressable
-              style={styles.controlButton}
-              onPress={(e) => {
-                e.stopPropagation();
-              }}
-            >
-              <IconSymbol
-                name="shuffle"
-                size={16}
-                color={tokens.colors.primary}
-              />
-            </Pressable>
-            <Pressable
-              style={styles.controlButton}
-              onPress={(e) => {
-                e.stopPropagation();
-                skipPrevious();
-              }}
-            >
-              <IconSymbol
-                name="backward.fill"
-                size={16}
-                color={tokens.colors.primary}
-              />
-            </Pressable>
-            <Pressable style={styles.playButton} onPress={handlePlayPause}>
-              <IconSymbol
-                name={isPlaying ? "pause.fill" : "play.fill"}
-                size={20}
-                color={tokens.colors.primary}
-              />
-            </Pressable>
-            <Pressable
-              style={styles.controlButton}
-              onPress={(e) => {
-                e.stopPropagation();
-                skipNext();
-              }}
-            >
-              <IconSymbol
-                name="forward.fill"
-                size={16}
-                color={tokens.colors.primary}
-              />
-            </Pressable>
-            <Pressable
-              style={styles.controlButton}
-              onPress={(e) => {
-                e.stopPropagation();
-              }}
-            >
-              <IconSymbol name="repeat" size={16} color={tokens.colors.primary} />
-            </Pressable>
-          </View>
+          </Pressable>
         </View>
 
         {/* Right Side - Volume */}
         <View style={styles.rightSection}>
-          <IconSymbol
-            name="speaker.wave.2"
+          <Volume2
             size={16}
-            color={tokens.colors.primary}
+            color={tokens.colors.iconMuted}
           />
           <Slider
             style={styles.volumeSlider}
@@ -339,13 +367,14 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
             maximumValue={100}
             value={volume * 100}
             onSlidingComplete={handleVolumeChange}
-            minimumTrackTintColor={tokens.colors.primary}
-            maximumTrackTintColor={tokens.colors.surface}
+            minimumTrackTintColor={tokens.colors.primaryAlternate}
+            maximumTrackTintColor={tokens.colors.primaryMutedBg}
             thumbTintColor={tokens.colors.primary}
+            {...({ thumbStyle: styles.volumeThumb } as any)}
           />
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -355,7 +384,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 80,
+    height: 68,
     borderTopWidth: 1,
   },
   content: {
@@ -363,14 +392,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingTop: 12,
+    paddingBottom: 0,
     gap: 20,
+    position: "relative",
   },
   leftSection: {
-    width: 280,
+    position: "absolute",
+    left: 10,
+    top: 0,
+    bottom: 0,
+    width: 340,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "flex-start",
     gap: 12,
+    zIndex: 10,
+  },
+  albumArt: {
+    width: 48,
+    height: 48,
+    borderRadius: 6,
+    justifyContent: "center",
+    alignItems: "center",
+    flexShrink: 0,
   },
   trackInfoContainer: {
     flex: 1,
@@ -382,7 +427,7 @@ const styles = StyleSheet.create({
     flexWrap: 'nowrap',
   },
   trackTitle: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "600",
     flexWrap: 'nowrap',
     flexShrink: 0,
@@ -400,16 +445,22 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   centerSection: {
-    flex: 1,
+    position: "absolute",
+    left: -20,
+    right: -20,
+    top: 0,
+    bottom: 0,
     alignItems: "center",
-    gap: 8,
+    gap: 0,
   },
   progressContainer: {
     flexDirection: "row",
     alignItems: "center",
-    width: "100%",
+    width: 360,
+    height: 20,
     gap: 12,
-    position: "relative",
+    position: "absolute",
+    bottom: 6,
   },
   timeText: {
     fontSize: 12,
@@ -429,10 +480,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    height: 20,
+    marginTop: 14,
   },
   controlButton: {
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -443,14 +496,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   rightSection: {
+    position: "absolute",
+    right: 10,
+    top: 0,
+    bottom: 0,
     width: 120,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   volumeSlider: {
     flex: 1,
     height: 20,
+  },
+  volumeThumb: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
   scrubTooltip: {
     position: "absolute",
@@ -459,10 +522,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
     zIndex: 1000,
   },
   scrubTooltipText: {

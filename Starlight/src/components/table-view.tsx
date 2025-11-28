@@ -11,6 +11,7 @@ import {
 import { PanGestureHandler, LongPressGestureHandler, State } from "react-native-gesture-handler";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { Music } from "lucide-react-native";
 import { IconButton } from "@/src/components/ui/icon-button";
 import { Text } from "@/src/components/ui/text";
 import { useTheme } from "@/src/theme/provider";
@@ -126,7 +127,7 @@ function TableHeader({
                 onPress={() => onSort?.(column.key)}
               >
                 <Text
-                  style={[styles.headerText, { color: tokens.colors.text }]}
+                  style={[styles.headerText, { color: tokens.colors.subtleText }]}
                 >
                   {column.label}
                 </Text>
@@ -136,7 +137,7 @@ function TableHeader({
                       sortDirection === "asc" ? "chevron.up" : "chevron.down"
                     }
                     size={12}
-                    color={tokens.colors.primary}
+                    color={tokens.colors.subtleText}
                   />
                 )}
               </Pressable>
@@ -146,7 +147,7 @@ function TableHeader({
                 <View
                   style={[
                     styles.columnDivider,
-                    { backgroundColor: tokens.colors.background },
+                    { backgroundColor: 'transparent' },
                   ]}
                 />
                 <PanGestureHandler
@@ -298,6 +299,11 @@ function ContextMenu({
               borderColor: tokens.colors.border,
               left: position.x,
               top: position.y,
+              shadowColor: tokens.colors.shadow,
+              shadowOffset: tokens.shadow.offset,
+              shadowOpacity: tokens.shadow.opacity,
+              shadowRadius: tokens.shadow.radius,
+              elevation: tokens.shadow.elevation,
             },
           ]}
         >
@@ -356,6 +362,9 @@ function TableRow({
 }: TableRowProps) {
   const { tokens } = useTheme();
   const { activeTrack, isPlaying } = usePlayerStore();
+  
+  // Get duration from track, or fallback to activeTrack if this is the currently playing track
+  const trackDurationMs = track.durationMs ?? (activeTrack?.id === track.id ? activeTrack.durationMs : null);
   /**
    * Global drag-and-drop wiring shared with the Now Playing sheet and sidebar.  Each
    * row contributes pointer updates so the overlay can be rendered centrally.
@@ -385,7 +394,7 @@ function TableRow({
   const getSourceIcon = () => {
     // You can customize this based on track source
     return (
-      <IconSymbol name="music.note" size={16} color={tokens.colors.primary} />
+      <Music size={16} color={tokens.colors.primary} />
     );
   };
 
@@ -521,20 +530,20 @@ function TableRow({
 
   const rowContent = (
     <Pressable
-      style={[
+        style={[
         styles.row,
         {
           backgroundColor: isCurrentlyPlaying
-            ? tokens.colors.primary + '20' // Semi-transparent primary color for currently playing
+            ? tokens.colors.primaryMutedBg // Semi-transparent primary color for currently playing
             : isDragging
-            ? tokens.colors.primary + '30'
+            ? tokens.colors.primaryMutedBg
             : isPressed 
             ? tokens.colors.surfaceElevated 
             : isHovered 
             ? tokens.colors.surfaceElevated 
             : tokens.colors.surface,
           borderBottomColor: tokens.colors.background,
-          opacity: isDragging ? 0.5 : 1,
+          opacity: isDragging ? tokens.opacity.dragging : 1,
         },
       ]}
       onPress={isDragging ? undefined : handlePress}
@@ -618,10 +627,10 @@ function TableRow({
           case "time":
             content = (
               <Text 
-                style={[styles.cellText, { color: tokens.colors.text }]}
+                style={[styles.cellText, { color: tokens.colors.subtleText }]}
                 numberOfLines={1}
               >
-                {formatDuration(track.durationMs)}
+                {formatDuration(trackDurationMs)}
               </Text>
             );
             break;
@@ -648,7 +657,7 @@ function TableRow({
           case "bpm":
             content = (
               <Text 
-                style={[styles.cellText, { color: tokens.colors.text }]}
+                style={[styles.cellText, { color: tokens.colors.subtleText }]}
                 numberOfLines={1}
               >
                 {track.bpm ?? "N/A"}
@@ -715,7 +724,7 @@ function TableRow({
             <View
               style={[
                 styles.cell,
-                { width: column.width },
+                { width: column.width + 1 },
                 column.key === "source"
                   ? { alignItems: "center" }
                   : {},
@@ -730,7 +739,7 @@ function TableRow({
               <View
                 style={[
                   styles.columnDivider,
-                  { backgroundColor: tokens.colors.background },
+                  { backgroundColor: 'transparent' },
                 ]}
               />
             )}
@@ -986,6 +995,11 @@ export function TableView({
     });
   }, [tracks, sortColumn, sortDirection]);
 
+  // Filter out the "select" column from visible columns
+  const visibleColumns = React.useMemo(() => {
+    return columns.filter((col) => col.key !== "select");
+  }, [columns]);
+
   return (
     <View
       style={[
@@ -997,7 +1011,7 @@ export function TableView({
         onSort={handleSort}
         sortColumn={sortColumn}
         sortDirection={sortDirection}
-        columns={columns}
+        columns={visibleColumns}
         onColumnResize={handleColumnResize}
         selectedTracks={selectedTracks}
         allTracks={tracks}
@@ -1014,7 +1028,7 @@ export function TableView({
             onDelete={onTrackDelete}
             onAddToPlaylist={onTrackAddToPlaylist}
             onShowPlaylists={onTrackShowPlaylists}
-            columns={columns}
+            columns={visibleColumns}
             onContextMenu={handleContextMenu}
             isSelected={selectedTracks.has(item.id)}
             onToggleSelect={handleToggleSelect}
@@ -1046,14 +1060,14 @@ export function TableView({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: 22,
+    paddingTop: 12,
   },
   header: {
     flexDirection: "row",
-    paddingVertical: 12,
+    paddingVertical: 7,
     paddingHorizontal: 16,
-    borderBottomWidth: 2,
+    borderBottomWidth: 0,
   },
   headerCellContainer: {
     flexDirection: "row",
@@ -1064,10 +1078,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerCell: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    justifyContent: "space-between",
   },
   columnDivider: {
     width: 1,
@@ -1093,7 +1107,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderBottomWidth: 2,
+    borderTopWidth: 1,
   },
   cell: {
     paddingHorizontal: 8,
@@ -1104,13 +1118,15 @@ const styles = StyleSheet.create({
     fontWeight: "400",
   },
   tag: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
   },
   tagText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "500",
+    lineHeight: 10,
+    includeFontPadding: false,
+    marginVertical: -4,
   },
   // Context Menu Styles
   contextMenuBackdrop: {
@@ -1126,14 +1142,6 @@ const styles = StyleSheet.create({
     minWidth: 180,
     borderRadius: 8,
     borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
   },
   contextMenuItem: {
     paddingVertical: 12,
