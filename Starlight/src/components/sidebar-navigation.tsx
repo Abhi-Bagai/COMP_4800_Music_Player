@@ -1,11 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from "react-native";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Folder, Music } from "lucide-react-native";
@@ -72,11 +66,8 @@ export function SidebarNavigation({
   const { tokens } = useTheme();
   const { playlists } = usePlaylistStore();
   const { draggedTrack, hoveredPlaylistId } = useDrag();
-  const [expandedItems, setExpandedItems] = useState<string[]>([
-    "library",
-    "playlists",
-  ]);
-  const [searchText, setSearchText] = useState("");
+  const [expandedItems, setExpandedItems] = useState<string[]>(['library', 'playlists']);
+  const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
     onSearchChange?.(searchText);
@@ -84,9 +75,7 @@ export function SidebarNavigation({
 
   const toggleExpanded = (itemId: string) => {
     setExpandedItems((prev) =>
-      prev.includes(itemId)
-        ? prev.filter((id) => id !== itemId)
-        : [...prev, itemId]
+      prev.includes(itemId) ? prev.filter((id) => id !== itemId) : [...prev, itemId]
     );
   };
 
@@ -100,13 +89,13 @@ export function SidebarNavigation({
 
   const navigationItemsWithPlaylists = useMemo(() => {
     return navigationItems.map((item) =>
-      item.id === "playlists"
+      item.id === 'playlists'
         ? {
             ...item,
             children: playlists.map((playlist) => ({
               id: playlist.id,
               label: playlist.name,
-              icon: "music.note.list",
+              icon: 'music.note.list',
             })),
           }
         : item
@@ -116,8 +105,10 @@ export function SidebarNavigation({
   const renderNavigationItem = (item: NavigationItem, level = 0) => {
     const isExpanded = expandedItems.includes(item.id);
     const isSelected = currentView === item.id;
-    const isPlaylistsNode = item.id === "playlists";
-    const children = isPlaylistsNode ? navigationItemsWithPlaylists.find((nav) => nav.id === "playlists")?.children : item.children;
+    const isPlaylistsNode = item.id === 'playlists';
+    const children = isPlaylistsNode
+      ? navigationItemsWithPlaylists.find((nav) => nav.id === 'playlists')?.children
+      : item.children;
     const hasChildren = !!children && children.length > 0;
 
     const handleItemClick = () => {
@@ -145,8 +136,8 @@ export function SidebarNavigation({
               backgroundColor: isSelected
                 ? tokens.colors.surfaceElevated
                 : pressed
-                ? tokens.colors.surfaceElevated
-                : "transparent",
+                  ? tokens.colors.surfaceElevated
+                  : 'transparent',
               paddingLeft: 16 + level * 16,
             },
           ]}
@@ -171,8 +162,7 @@ export function SidebarNavigation({
                 {
                   color: tokens.colors.text,
                 },
-              ]}
-            >
+              ]}>
               {item.label}
             </Text>
             {hasChildren && (
@@ -232,14 +222,8 @@ export function SidebarNavigation({
       style={[styles.container, { backgroundColor: tokens.colors.sidebar }]}
     >
       {/* Search Bar */}
-      <View
-        style={[styles.searchContainer, { backgroundColor: tokens.colors.surfaceElevated }]}
-      >
-        <IconSymbol
-          name="magnifyingglass"
-          size={16}
-          color={tokens.colors.subtleText}
-        />
+      <View style={[styles.searchContainer, { backgroundColor: tokens.colors.surfaceElevated }]}>
+        <IconSymbol name="magnifyingglass" size={16} color={tokens.colors.subtleText} />
         <TextInput
           style={[styles.searchInput, { color: tokens.colors.text }]}
           placeholder="Search library..."
@@ -250,10 +234,7 @@ export function SidebarNavigation({
       </View>
 
       {/* Navigation Items */}
-      <ScrollView
-        style={styles.navigationContainer}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView style={styles.navigationContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.navigationContent}>
           {navigationItems.map((item) => renderNavigationItem(item))}
         </View>
@@ -267,8 +248,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
     margin: 12,
@@ -291,8 +272,8 @@ const styles = StyleSheet.create({
     marginVertical: 1,
   },
   navItemContent: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 12,
     gap: 8,
@@ -303,7 +284,7 @@ const styles = StyleSheet.create({
   navItemText: {
     flex: 1,
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   childrenContainer: {
     marginLeft: 8,
@@ -363,11 +344,11 @@ function SidebarPlaylistNavItem({
    * Web needs to recompute when the window resizes because our layout transform changes.
    */
   useEffect(() => {
-    if (Platform.OS === "web") {
+    if (Platform.OS === 'web') {
       const handleResize = () => updateDropZoneLayout();
-      window.addEventListener("resize", handleResize);
+      window.addEventListener('resize', handleResize);
       return () => {
-        window.removeEventListener("resize", handleResize);
+        window.removeEventListener('resize', handleResize);
       };
     }
     return;
@@ -476,11 +457,10 @@ function SidebarPlaylistNavItem({
                 styles.navItemText,
                 {
                   color: tokens.colors.text,
-                  fontWeight: "500",
+                  fontWeight: '500',
                 },
               ]}
-              numberOfLines={1}
-            >
+              numberOfLines={1}>
               {playlist.name}
             </Text>
             {playlist.trackCount > 0 && (
