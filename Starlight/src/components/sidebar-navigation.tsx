@@ -54,6 +54,11 @@ const navigationItems: NavigationItem[] = [
     label: "Genres",
     icon: "folder",
   },
+    {
+    id: 'spotify-playlists',
+    label: 'Get Spotify Playlists',
+    icon: 'cloud',
+  }
 ];
 
 export function SidebarNavigation({
