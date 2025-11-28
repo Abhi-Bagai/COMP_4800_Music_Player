@@ -2,7 +2,7 @@ import Slider from '@react-native-community/slider';
 import React, { useEffect, useRef } from "react";
 import { Pressable, StyleSheet, View, Animated, Dimensions } from "react-native";
 
-import { IconSymbol } from "@/components/ui/icon-symbol";
+import { Play, Pause, FastForward, Rewind, Volume2, Shuffle, Repeat, Tag, Music } from "lucide-react-native";
 import { Button } from "@/src/components/ui/button";
 import { Text } from "@/src/components/ui/text";
 import { useTrackScrubbing } from "@/src/hooks/use-track-scrubbing";
@@ -193,7 +193,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
         <View style={styles.leftSection}>
           {/* Track Icon Square */}
           <View style={[styles.albumArt, { backgroundColor: tokens.colors.surfaceElevated }]}>
-            <IconSymbol name="music.note" size={20} color={tokens.colors.subtleText} />
+            <Music size={20} color={tokens.colors.subtleText} />
           </View>
           <View style={styles.trackInfoContainer}>
             <ScrollingText
@@ -220,8 +220,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
             }}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <IconSymbol
-                name="tag"
+              <Tag
                 size={12}
                 color={tokens.colors.primary}
               />
@@ -248,8 +247,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
                 e.stopPropagation();
               }}
             >
-              <IconSymbol
-                name="shuffle"
+              <Shuffle
                 size={18}
                 color={tokens.colors.iconMuted}
               />
@@ -261,18 +259,23 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
                 skipPrevious();
               }}
             >
-              <IconSymbol
-                name="backward.fill"
+              <Rewind
                 size={18}
                 color={tokens.colors.iconMuted}
               />
             </Pressable>
             <Pressable style={styles.playButton} onPress={handlePlayPause}>
-              <IconSymbol
-                name={isPlaying ? "pause.fill" : "play.fill"}
-                size={22}
-                color={tokens.colors.iconMuted}
-              />
+              {isPlaying ? (
+                <Pause
+                  size={18}
+                  color={tokens.colors.iconMuted}
+                />
+              ) : (
+                <Play
+                  size={18}
+                  color={tokens.colors.iconMuted}
+                />
+              )}
             </Pressable>
             <Pressable
               style={styles.controlButton}
@@ -281,8 +284,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
                 skipNext();
               }}
             >
-              <IconSymbol
-                name="forward.fill"
+              <FastForward
                 size={18}
                 color={tokens.colors.iconMuted}
               />
@@ -293,7 +295,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
                 e.stopPropagation();
               }}
             >
-              <IconSymbol name="repeat" size={18} color={tokens.colors.iconMuted} />
+              <Repeat size={18} color={tokens.colors.iconMuted} />
             </Pressable>
           </View>
 
@@ -355,8 +357,7 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
 
         {/* Right Side - Volume */}
         <View style={styles.rightSection}>
-          <IconSymbol
-            name="speaker.wave.2"
+          <Volume2
             size={16}
             color={tokens.colors.iconMuted}
           />
@@ -399,9 +400,12 @@ const styles = StyleSheet.create({
   leftSection: {
     position: "absolute",
     left: 10,
+    top: 0,
+    bottom: 0,
     width: 340,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "flex-start",
     gap: 12,
     zIndex: 10,
   },
@@ -480,8 +484,8 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   controlButton: {
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
     justifyContent: "center",
     alignItems: "center",
   },

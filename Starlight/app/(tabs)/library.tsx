@@ -14,6 +14,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useTheme } from "@/src/theme/provider";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { Settings } from "lucide-react-native";
 import { AddToPlaylistModal } from "@/src/components/add-to-playlist-modal";
 import { AlbumsScreen } from "@/src/components/albums-screen";
 import { ArtistsScreen } from "@/src/components/artists-screen";
@@ -446,8 +447,7 @@ export default function HomeScreen() {
             })}
             accessibilityLabel="Settings"
           >
-            <IconSymbol 
-              name="gear" 
+            <Settings 
               size={18} 
               color={isOptionsHovered ? tokens.colors.text : tokens.colors.iconMuted} 
             />

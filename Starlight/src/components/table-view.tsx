@@ -11,6 +11,7 @@ import {
 import { PanGestureHandler, LongPressGestureHandler, State } from "react-native-gesture-handler";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { Music } from "lucide-react-native";
 import { IconButton } from "@/src/components/ui/icon-button";
 import { Text } from "@/src/components/ui/text";
 import { useTheme } from "@/src/theme/provider";
@@ -390,7 +391,7 @@ function TableRow({
   const getSourceIcon = () => {
     // You can customize this based on track source
     return (
-      <IconSymbol name="music.note" size={16} color={tokens.colors.primary} />
+      <Music size={16} color={tokens.colors.primary} />
     );
   };
 

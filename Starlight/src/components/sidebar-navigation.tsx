@@ -8,7 +8,7 @@ import {
 } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Folder } from "lucide-react-native";
+import { Folder, Music } from "lucide-react-native";
 import { Text } from "@/src/components/ui/text";
 import { usePlaylistStore } from "@/src/state/playlist-store";
 import { useLibraryStore } from "@/src/state/library-store";
@@ -520,8 +520,7 @@ function SidebarPlaylistNavItem({
                   onPress={() => handleTrackClick(playlistTrack)}
                 >
                   <View style={[styles.navItemContent, styles.mainNavItemContent]}>
-                    <IconSymbol
-                      name="music.note"
+                    <Music
                       size={12}
                       color={tokens.colors.subtleText}
                     />
