@@ -265,6 +265,7 @@ export class FileScanner {
             fileSize: file.size || 0,
             fileMtime: Math.floor((file.modificationTime || Date.now()) / 1000), // Convert to seconds
             durationMs: metadata.durationMs ?? null, // Extract duration from metadata
+            genre: metadata.genres ? JSON.stringify(metadata.genres) : null, // Store genres as JSON array string
           };
           batch.tracks.push(trackData);
           addedCount++;
@@ -312,6 +313,7 @@ export class FileScanner {
     album: string;
     title: string;
     durationMs?: number | null;
+    genres?: string[] | null;
   }> {
     try {
       // First try to extract metadata from the actual audio file
@@ -337,6 +339,7 @@ export class FileScanner {
     album: string;
     title: string;
     durationMs?: number | null;
+    genres?: string[] | null;
   } | null> {
     try {
       let fileBuffer: Uint8Array;
@@ -381,11 +384,17 @@ export class FileScanner {
         ? Math.floor(metadata.format.duration * 1000) 
         : null;
 
+      // Extract all genres from metadata (genre is an array)
+      const genres = metadata.common.genre && metadata.common.genre.length > 0
+        ? metadata.common.genre.filter((g): g is string => typeof g === 'string' && g.trim().length > 0)
+        : null;
+
       return {
         artist: metadata.common.artist || 'Unknown Artist',
         album: metadata.common.album || 'Unknown Album',
         title: metadata.common.title || this.getFallbackTitle(file.name),
         durationMs,
+        genres,
       };
     } catch (error) {
       console.warn(`Error parsing metadata for ${file.name}:`, error);

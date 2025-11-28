@@ -25,7 +25,7 @@ interface Track {
   artist?: { name: string } | null;
   album?: { title: string } | null;
   durationMs?: number | null;
-  genre?: string;
+  genres?: string[];
   bpm?: number;
   tags?: string[];
 }
@@ -665,12 +665,50 @@ function TableRow({
             );
             break;
           case "genre":
-            content = (
+            content = track.genres && track.genres.length > 0 ? (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                style={{ flex: 1 }}
+                contentContainerStyle={{ alignItems: 'center', gap: 4 }}
+              >
+                {track.genres.slice(0, 3).map((genre, genreIndex) => (
+                  <View
+                    key={genreIndex}
+                    style={[
+                      styles.tag,
+                      { backgroundColor: tokens.colors.surfaceElevated },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.tagText,
+                        { color: tokens.colors.subtleText },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {genre}
+                    </Text>
+                  </View>
+                ))}
+                {track.genres.length > 3 && (
+                  <Text
+                    style={[
+                      styles.tagText,
+                      { color: tokens.colors.subtleText },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    +{track.genres.length - 3}
+                  </Text>
+                )}
+              </ScrollView>
+            ) : (
               <Text
                 style={[styles.cellText, { color: tokens.colors.text }]}
                 numberOfLines={1}
               >
-                {track.genre ?? "Unknown"}
+                {""}
               </Text>
             );
             break;
@@ -982,8 +1020,9 @@ export function TableView({
           bValue = b.bpm ?? 0;
           break;
         case "genre":
-          aValue = a.genre?.toLowerCase() ?? "";
-          bValue = b.genre?.toLowerCase() ?? "";
+          // Sort by first genre, or empty string if no genres
+          aValue = a.genres && a.genres.length > 0 ? a.genres[0].toLowerCase() : "";
+          bValue = b.genres && b.genres.length > 0 ? b.genres[0].toLowerCase() : "";
           break;
         default:
           return 0;

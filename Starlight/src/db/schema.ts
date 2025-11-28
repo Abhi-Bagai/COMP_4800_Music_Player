@@ -38,6 +38,7 @@ export const tracks = sqliteTable('tracks', {
   trackNumber: integer('track_number'),
   bitrate: integer('bitrate'),
   sampleRate: integer('sample_rate'),
+  genre: text('genre'),
   fileUri: text('file_uri').notNull(),
   fileMtime: integer('file_mtime'),
   fileSize: integer('file_size'),

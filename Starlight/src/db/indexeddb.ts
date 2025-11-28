@@ -35,6 +35,7 @@ export interface TrackRecord {
   trackNumber?: number | null;
   bitrate?: number | null;
   sampleRate?: number | null;
+  genre?: string | null;
   fileUri: string;
   fileMtime?: number | null;
   fileSize?: number | null;
@@ -261,6 +262,7 @@ export async function idbSaveTracks(tracks: TrackRecord[]) {
         track_number: track.trackNumber ?? null,
         bitrate: track.bitrate ?? null,
         sample_rate: track.sampleRate ?? null,
+        genre: track.genre ?? null,
         file_uri: track.fileUri,
         file_mtime: track.fileMtime ?? null,
         file_size: track.fileSize ?? null,
@@ -343,6 +345,7 @@ export interface LibrarySnapshotItem {
   trackNumber: number | null;
   bitrate: number | null;
   sampleRate: number | null;
+  genres: string[] | null;
   fileUri: string;
   fileMtime: number | null;
   fileSize: number | null;
@@ -367,30 +370,50 @@ export async function idbFetchLibrarySnapshot(): Promise<LibrarySnapshotItem[]> 
 
     return trackRows
       .filter((t) => t.is_deleted !== 1)
-      .map<LibrarySnapshotItem>((track) => ({
-        id: track.id,
-        albumId: track.album_id,
-        artistId: track.artist_id,
-        title: track.title,
-        durationMs: track.duration_ms ?? null,
-        discNumber: track.disc_number ?? null,
-        trackNumber: track.track_number ?? null,
-        bitrate: track.bitrate ?? null,
-        sampleRate: track.sample_rate ?? null,
-        fileUri: track.file_uri,
-        fileMtime: track.file_mtime ?? null,
-        fileSize: track.file_size ?? null,
-        hash: track.hash ?? null,
-        isDeleted: track.is_deleted === 1,
-        createdAt: track.created_at ?? 0,
-        updatedAt: track.updated_at ?? 0,
-        album: track.album_id ? (albumMap.get(track.album_id)
-          ? { id: track.album_id, title: albumMap.get(track.album_id).title }
-          : null) : null,
-        artist: track.artist_id ? (artistMap.get(track.artist_id)
-          ? { id: track.artist_id, name: artistMap.get(track.artist_id).name }
-          : null) : null,
-      }));
+      .map<LibrarySnapshotItem>((track) => {
+        // Parse genres from JSON string to array
+        let genres: string[] | null = null;
+        if (track.genre) {
+          try {
+            const parsed = JSON.parse(track.genre);
+            if (Array.isArray(parsed)) {
+              genres = parsed;
+            } else if (typeof parsed === 'string') {
+              // Handle legacy single genre string
+              genres = [parsed];
+            }
+          } catch (e) {
+            // If parsing fails, treat as legacy single genre string
+            genres = [track.genre];
+          }
+        }
+        
+        return {
+          id: track.id,
+          albumId: track.album_id,
+          artistId: track.artist_id,
+          title: track.title,
+          durationMs: track.duration_ms ?? null,
+          discNumber: track.disc_number ?? null,
+          trackNumber: track.track_number ?? null,
+          bitrate: track.bitrate ?? null,
+          sampleRate: track.sample_rate ?? null,
+          genres,
+          fileUri: track.file_uri,
+          fileMtime: track.file_mtime ?? null,
+          fileSize: track.file_size ?? null,
+          hash: track.hash ?? null,
+          isDeleted: track.is_deleted === 1,
+          createdAt: track.created_at ?? 0,
+          updatedAt: track.updated_at ?? 0,
+          album: track.album_id ? (albumMap.get(track.album_id)
+            ? { id: track.album_id, title: albumMap.get(track.album_id).title }
+            : null) : null,
+          artist: track.artist_id ? (artistMap.get(track.artist_id)
+            ? { id: track.artist_id, name: artistMap.get(track.artist_id).name }
+            : null) : null,
+        };
+      });
   });
 }
 

@@ -41,6 +41,7 @@ export interface TrackUpsert {
   trackNumber?: number | null;
   bitrate?: number | null;
   sampleRate?: number | null;
+  genre?: string | null;
   fileUri: string;
   fileMtime?: number | null;
   fileSize?: number | null;
@@ -85,6 +86,7 @@ async function upsertLibraryBatchWeb({ artists, albums, tracks }: LibraryBatchUp
       trackNumber: track.trackNumber ?? null,
       bitrate: track.bitrate ?? null,
       sampleRate: track.sampleRate ?? null,
+      genre: track.genre ?? null,
       fileUri: track.fileUri,
       fileMtime: track.fileMtime ?? null,
       fileSize: track.fileSize ?? null,
@@ -147,6 +149,7 @@ export async function upsertLibraryBatch({ artists, albums, tracks }: LibraryBat
           durationMs: track.durationMs ?? null,
           bitrate: track.bitrate ?? null,
           sampleRate: track.sampleRate ?? null,
+          genre: track.genre ?? null,
           fileMtime: track.fileMtime ?? null,
           fileSize: track.fileSize ?? null,
           hash: track.hash ?? null,
@@ -212,7 +215,29 @@ export async function fetchLibrarySnapshot() {
       artist: true,
     },
   });
-  return allTracks;
+  
+  // Parse genres from JSON string to array for each track
+  return allTracks.map((track) => {
+    let genres: string[] | null = null;
+    if (track.genre) {
+      try {
+        const parsed = JSON.parse(track.genre);
+        if (Array.isArray(parsed)) {
+          genres = parsed;
+        } else if (typeof parsed === 'string') {
+          // Handle legacy single genre string
+          genres = [parsed];
+        }
+      } catch (e) {
+        // If parsing fails, treat as legacy single genre string
+        genres = [track.genre];
+      }
+    }
+    return {
+      ...track,
+      genres,
+    };
+  });
 }
 
 export async function findTrackByFile(uri: string, mtime?: number | null) {
