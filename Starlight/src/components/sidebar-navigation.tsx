@@ -58,11 +58,6 @@ const navigationItems: NavigationItem[] = [
     id: "genres",
     label: "Genres",
     icon: "folder",
-  },
-    {
-    id: 'spotify-playlists',
-    label: 'Get Spotify Playlists',
-    icon: 'cloud',
   }
 ];
 
