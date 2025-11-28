@@ -1,4 +1,4 @@
-import { checkTrackExists } from '@/src/db';
+import { checkTrackExists, findTrackByTitleAndArtist, updateTrackMetadata, type TrackMetadataUpdate } from '@/src/db';
 import * as FileSystem from 'expo-file-system';
 import { Platform } from 'react-native';
 import * as MusicMetadata from 'music-metadata';
@@ -218,10 +218,47 @@ export class FileScanner {
           const sanitizedArtist = this.sanitizeString(metadata.artist);
 
           // Check if track already exists
-          const exists = await checkTrackExists(sanitizedTitle, sanitizedArtist, file.size || 0);
-          if (exists) {
-            console.log(`FileScanner: Skipping duplicate track: ${sanitizedTitle} by ${sanitizedArtist}`);
-            skippedCount++;
+          const existingTrack = await findTrackByTitleAndArtist(sanitizedTitle, sanitizedArtist);
+          if (existingTrack) {
+            // Track exists - check if we need to update any missing metadata
+            const metadataUpdates: TrackMetadataUpdate = {};
+            let hasUpdates = false;
+
+            // Check each metadata field and add to updates if missing in existing track
+            // Only update fields that are actually in MP3 metadata (not app-managed fields like trackNumber)
+            // Only update fields that are null/undefined in the existing track but available in the new metadata
+            if (!existingTrack.artworkUri && metadata.artworkUri) {
+              metadataUpdates.artworkUri = metadata.artworkUri;
+              hasUpdates = true;
+            }
+            if (!existingTrack.durationMs && metadata.durationMs) {
+              metadataUpdates.durationMs = metadata.durationMs;
+              hasUpdates = true;
+            }
+            if (!existingTrack.genre && metadata.genres) {
+              metadataUpdates.genre = JSON.stringify(metadata.genres);
+              hasUpdates = true;
+            }
+            // Note: trackNumber and discNumber are not updated here as they may be app-managed
+            // They are still extracted and saved for new tracks, but not updated for existing ones
+            if (!existingTrack.bitrate && metadata.bitrate) {
+              metadataUpdates.bitrate = metadata.bitrate;
+              hasUpdates = true;
+            }
+            if (!existingTrack.sampleRate && metadata.sampleRate) {
+              metadataUpdates.sampleRate = metadata.sampleRate;
+              hasUpdates = true;
+            }
+
+            if (hasUpdates) {
+              // Update missing metadata fields
+              console.log(`FileScanner: Updating missing metadata for existing track: ${sanitizedTitle} by ${sanitizedArtist}`, metadataUpdates);
+              await updateTrackMetadata(existingTrack.id, metadataUpdates);
+              skippedCount++; // Count as skipped since we're not adding a new track
+            } else {
+              console.log(`FileScanner: Skipping duplicate track: ${sanitizedTitle} by ${sanitizedArtist}`);
+              skippedCount++;
+            }
             continue;
           }
 
@@ -266,6 +303,11 @@ export class FileScanner {
             fileMtime: Math.floor((file.modificationTime || Date.now()) / 1000), // Convert to seconds
             durationMs: metadata.durationMs ?? null, // Extract duration from metadata
             genre: metadata.genres ? JSON.stringify(metadata.genres) : null, // Store genres as JSON array string
+            artworkUri: metadata.artworkUri ?? null, // Extract artwork from metadata
+            trackNumber: metadata.trackNumber ?? null,
+            discNumber: metadata.discNumber ?? null,
+            bitrate: metadata.bitrate ?? null,
+            sampleRate: metadata.sampleRate ?? null,
           };
           batch.tracks.push(trackData);
           addedCount++;
@@ -314,6 +356,11 @@ export class FileScanner {
     title: string;
     durationMs?: number | null;
     genres?: string[] | null;
+    artworkUri?: string | null;
+    trackNumber?: number | null;
+    discNumber?: number | null;
+    bitrate?: number | null;
+    sampleRate?: number | null;
   }> {
     try {
       // First try to extract metadata from the actual audio file
@@ -331,6 +378,11 @@ export class FileScanner {
     return {
       ...fallback,
       durationMs: null, // No duration available from filename parsing
+      artworkUri: null, // No artwork available from filename parsing
+      trackNumber: null,
+      discNumber: null,
+      bitrate: null,
+      sampleRate: null,
     };
   }
 
@@ -340,6 +392,11 @@ export class FileScanner {
     title: string;
     durationMs?: number | null;
     genres?: string[] | null;
+    artworkUri?: string | null;
+    trackNumber?: number | null;
+    discNumber?: number | null;
+    bitrate?: number | null;
+    sampleRate?: number | null;
   } | null> {
     try {
       let fileBuffer: Uint8Array;
@@ -389,12 +446,52 @@ export class FileScanner {
         ? metadata.common.genre.filter((g): g is string => typeof g === 'string' && g.trim().length > 0)
         : null;
 
+      // Extract album artwork from metadata (picture is an array)
+      let artworkUri: string | null = null;
+      if (metadata.common.picture && metadata.common.picture.length > 0) {
+        // Prefer cover art (type 3) or use first picture
+        const coverPicture = metadata.common.picture.find(p => p.type === 'Cover (front)') || metadata.common.picture[0];
+        if (coverPicture && coverPicture.data) {
+          try {
+            // Convert picture data to base64 data URI
+            const format = coverPicture.format || 'image/jpeg';
+            const base64 = this.bufferToBase64(coverPicture.data);
+            artworkUri = `data:${format};base64,${base64}`;
+          } catch (error) {
+            console.warn(`Failed to convert artwork to data URI for ${file.name}:`, error);
+          }
+        }
+      }
+
+      // Extract track number (can be a number or object with 'no' and 'of' properties)
+      const trackNumber = metadata.common.track 
+        ? (typeof metadata.common.track === 'number' 
+            ? metadata.common.track 
+            : metadata.common.track.no ?? null)
+        : null;
+
+      // Extract disc number (can be a number or object with 'no' and 'of' properties)
+      const discNumber = metadata.common.disk 
+        ? (typeof metadata.common.disk === 'number' 
+            ? metadata.common.disk 
+            : metadata.common.disk.no ?? null)
+        : null;
+
+      // Extract bitrate and sample rate from format
+      const bitrate = metadata.format.bitrate ?? null;
+      const sampleRate = metadata.format.sampleRate ?? null;
+
       return {
         artist: metadata.common.artist || 'Unknown Artist',
         album: metadata.common.album || 'Unknown Album',
         title: metadata.common.title || this.getFallbackTitle(file.name),
         durationMs,
         genres,
+        artworkUri,
+        trackNumber,
+        discNumber,
+        bitrate,
+        sampleRate,
       };
     } catch (error) {
       console.warn(`Error parsing metadata for ${file.name}:`, error);
@@ -439,6 +536,18 @@ export class FileScanner {
   private getFallbackTitle(filename: string): string {
     const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
     return nameWithoutExt;
+  }
+
+  private bufferToBase64(buffer: Uint8Array | ArrayLike<number>): string {
+    // Convert Uint8Array or array-like to base64 string
+    // Handle both Buffer (Node.js) and Uint8Array (browser/React Native)
+    const uint8Array = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+    let binary = '';
+    const len = uint8Array.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(uint8Array[i]);
+    }
+    return btoa(binary);
   }
 
   private generateId(input: string): string {

@@ -28,6 +28,7 @@ export const INITIAL_MIGRATION = [
     bitrate INTEGER,
     sample_rate INTEGER,
     genre TEXT,
+    artwork_uri TEXT,
     file_uri TEXT,
     file_mtime INTEGER,
     file_size INTEGER,
@@ -62,7 +63,10 @@ export const INITIAL_MIGRATION = [
   )`,
   // Add genre column to existing tracks table if it doesn't exist
   // This will fail silently if the column already exists, which is fine
-  `ALTER TABLE tracks ADD COLUMN genre TEXT`
+  `ALTER TABLE tracks ADD COLUMN genre TEXT`,
+  // Add artwork_uri column to existing tracks table if it doesn't exist
+  // This will fail silently if the column already exists, which is fine
+  `ALTER TABLE tracks ADD COLUMN artwork_uri TEXT`
 ];
 
 export async function runInitialMigration(db: { execAsync: (sql: string) => Promise<void> }) {

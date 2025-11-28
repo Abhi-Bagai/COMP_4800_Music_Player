@@ -36,6 +36,7 @@ export interface TrackRecord {
   bitrate?: number | null;
   sampleRate?: number | null;
   genre?: string | null;
+  artworkUri?: string | null;
   fileUri: string;
   fileMtime?: number | null;
   fileSize?: number | null;
@@ -263,6 +264,7 @@ export async function idbSaveTracks(tracks: TrackRecord[]) {
         bitrate: track.bitrate ?? null,
         sample_rate: track.sampleRate ?? null,
         genre: track.genre ?? null,
+        artwork_uri: track.artworkUri ?? null,
         file_uri: track.fileUri,
         file_mtime: track.fileMtime ?? null,
         file_size: track.fileSize ?? null,
@@ -346,6 +348,7 @@ export interface LibrarySnapshotItem {
   bitrate: number | null;
   sampleRate: number | null;
   genres: string[] | null;
+  artworkUri: string | null;
   fileUri: string;
   fileMtime: number | null;
   fileSize: number | null;
@@ -399,6 +402,7 @@ export async function idbFetchLibrarySnapshot(): Promise<LibrarySnapshotItem[]> 
           bitrate: track.bitrate ?? null,
           sampleRate: track.sample_rate ?? null,
           genres,
+          artworkUri: track.artwork_uri ?? null,
           fileUri: track.file_uri,
           fileMtime: track.file_mtime ?? null,
           fileSize: track.file_size ?? null,
@@ -455,6 +459,84 @@ export async function idbCheckTrackExists(title: string, artistName: string): Pr
         cursor.continue();
       };
     });
+  });
+}
+
+export interface TrackMetadata {
+  id: string;
+  artworkUri: string | null;
+  durationMs: number | null;
+  genre: string | null;
+  discNumber: number | null;
+  trackNumber: number | null;
+  bitrate: number | null;
+  sampleRate: number | null;
+}
+
+export async function idbFindTrackByTitleAndArtist(title: string, artistName: string): Promise<TrackMetadata | null> {
+  const artistLower = artistName.toLowerCase();
+  const titleLower = title.toLowerCase();
+
+  return await withStores(['tracks'], 'readonly', async ({ tracks }) => {
+    const cursorRequest = tracks.openCursor();
+    return await new Promise<TrackMetadata | null>((resolve, reject) => {
+      cursorRequest.onerror = () => reject(cursorRequest.error ?? new Error('IndexedDB cursor failed'));
+      cursorRequest.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+        if (!cursor) {
+          resolve(null);
+          return;
+        }
+        const value = cursor.value;
+        if (
+          value.is_deleted !== 1 &&
+          value.title?.toLowerCase() === titleLower &&
+          value.artist_name_lower === artistLower
+        ) {
+          resolve({
+            id: value.id,
+            artworkUri: value.artwork_uri ?? null,
+            durationMs: value.duration_ms ?? null,
+            genre: value.genre ?? null,
+            discNumber: value.disc_number ?? null,
+            trackNumber: value.track_number ?? null,
+            bitrate: value.bitrate ?? null,
+            sampleRate: value.sample_rate ?? null,
+          });
+          return;
+        }
+        cursor.continue();
+      };
+    });
+  });
+}
+
+export interface TrackMetadataUpdate {
+  artworkUri?: string | null;
+  durationMs?: number | null;
+  genre?: string | null;
+  discNumber?: number | null;
+  trackNumber?: number | null;
+  bitrate?: number | null;
+  sampleRate?: number | null;
+}
+
+export async function idbUpdateTrackMetadata(trackId: string, updates: TrackMetadataUpdate) {
+  await withStores(['tracks'], 'readwrite', async ({ tracks }) => {
+    const existing = await requestToPromise<any | undefined>(tracks.get(trackId));
+    if (!existing) return;
+    
+    // Only update fields that are explicitly provided
+    if ('artworkUri' in updates) existing.artwork_uri = updates.artworkUri ?? null;
+    if ('durationMs' in updates) existing.duration_ms = updates.durationMs ?? null;
+    if ('genre' in updates) existing.genre = updates.genre ?? null;
+    if ('discNumber' in updates) existing.disc_number = updates.discNumber ?? null;
+    if ('trackNumber' in updates) existing.track_number = updates.trackNumber ?? null;
+    if ('bitrate' in updates) existing.bitrate = updates.bitrate ?? null;
+    if ('sampleRate' in updates) existing.sample_rate = updates.sampleRate ?? null;
+    
+    existing.updated_at = now();
+    await requestToPromise(tracks.put(existing));
   });
 }
 
