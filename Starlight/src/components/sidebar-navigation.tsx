@@ -50,6 +50,11 @@ const navigationItems: NavigationItem[] = [
     icon: "folder",
   },
   {
+    id: "spotify-playlists",
+    label: "Get Spotify Playlists",
+    icon: "cloud",
+  },
+  {
     id: "genres",
     label: "Genres",
     icon: "folder",

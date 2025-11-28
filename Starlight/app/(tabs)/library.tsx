@@ -11,6 +11,7 @@ import { AddToPlaylistModal } from "@/src/components/add-to-playlist-modal";
 import { AlbumsScreen } from "@/src/components/albums-screen";
 import { ArtistsScreen } from "@/src/components/artists-screen";
 import { PlaylistsScreen } from "@/src/components/playlists-screen";
+import { SpotifyPlaylistImportScreen } from "@/src/components/spotify-playlist-import-screen";
 import { MiniPlayer } from "@/src/components/mini-player";
 import { PlaylistCreationModal } from "@/src/components/playlist-creation-modal";
 import { PlaylistDetailScreen } from "@/src/components/playlist-detail-screen";
