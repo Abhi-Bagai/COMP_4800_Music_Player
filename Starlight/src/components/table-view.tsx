@@ -362,6 +362,9 @@ function TableRow({
 }: TableRowProps) {
   const { tokens } = useTheme();
   const { activeTrack, isPlaying } = usePlayerStore();
+  
+  // Get duration from track, or fallback to activeTrack if this is the currently playing track
+  const trackDurationMs = track.durationMs ?? (activeTrack?.id === track.id ? activeTrack.durationMs : null);
   /**
    * Global drag-and-drop wiring shared with the Now Playing sheet and sidebar.  Each
    * row contributes pointer updates so the overlay can be rendered centrally.
@@ -627,7 +630,7 @@ function TableRow({
                 style={[styles.cellText, { color: tokens.colors.subtleText }]}
                 numberOfLines={1}
               >
-                {formatDuration(track.durationMs)}
+                {formatDuration(trackDurationMs)}
               </Text>
             );
             break;

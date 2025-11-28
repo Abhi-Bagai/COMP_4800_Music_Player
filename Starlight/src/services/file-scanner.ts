@@ -264,6 +264,7 @@ export class FileScanner {
             fileUri: persistentUri, // Use the persistent data URI
             fileSize: file.size || 0,
             fileMtime: Math.floor((file.modificationTime || Date.now()) / 1000), // Convert to seconds
+            durationMs: metadata.durationMs ?? null, // Extract duration from metadata
           };
           batch.tracks.push(trackData);
           addedCount++;
@@ -310,6 +311,7 @@ export class FileScanner {
     artist: string;
     album: string;
     title: string;
+    durationMs?: number | null;
   }> {
     try {
       // First try to extract metadata from the actual audio file
@@ -323,13 +325,18 @@ export class FileScanner {
 
     // Fallback to filename parsing if metadata extraction fails
     console.log("Fallback to filename parsing");
-    return this.extractMetadataFromFilenameFallback(file);
+    const fallback = this.extractMetadataFromFilenameFallback(file);
+    return {
+      ...fallback,
+      durationMs: null, // No duration available from filename parsing
+    };
   }
 
   private async extractMetadataFromFile(file: MusicFile & { file?: File }): Promise<{
     artist: string;
     album: string;
     title: string;
+    durationMs?: number | null;
   } | null> {
     try {
       let fileBuffer: Uint8Array;
@@ -369,10 +376,16 @@ export class FileScanner {
       console.log("Metadata:", metadata);
       console.log("Common:", metadata.common);
 
+      // Extract duration from metadata (format.duration is in seconds)
+      const durationMs = metadata.format.duration 
+        ? Math.floor(metadata.format.duration * 1000) 
+        : null;
+
       return {
         artist: metadata.common.artist || 'Unknown Artist',
         album: metadata.common.album || 'Unknown Album',
         title: metadata.common.title || this.getFallbackTitle(file.name),
+        durationMs,
       };
     } catch (error) {
       console.warn(`Error parsing metadata for ${file.name}:`, error);

@@ -12,6 +12,7 @@ import {
   idbFetchLibrarySnapshot,
   idbFindTrackByFile,
   idbCheckTrackExists,
+  idbUpdateTrackDuration,
 } from './indexeddb';
 
 export interface ArtistUpsert {
@@ -246,6 +247,19 @@ export async function checkTrackExists(title: string, artistName: string, fileSi
       )
     );
   return result.length > 0;
+}
+
+export async function updateTrackDuration(trackId: string, durationMs: number) {
+  if (Platform.OS === 'web') {
+    await idbUpdateTrackDuration(trackId, durationMs);
+    return;
+  }
+
+  const db = await getDb();
+  await db
+    .update(schema.tracks)
+    .set({ durationMs })
+    .where(eq(schema.tracks.id, trackId));
 }
 
 export type LibraryTrack = Awaited<ReturnType<typeof fetchLibrarySnapshot>> extends (infer Item)[]
