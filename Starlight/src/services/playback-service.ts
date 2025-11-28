@@ -11,19 +11,31 @@ let statusUpdateInterval: NodeJS.Timeout | null = null;
 function setupStatusUpdates(player: ReturnType<typeof useAudioPlayer>) {
   if (statusUpdateInterval) {
     clearInterval(statusUpdateInterval);
+    statusUpdateInterval = null;
   }
 
   statusUpdateInterval = setInterval(() => {
     try {
-      const isPlaying = !!player.playing;
-      const rawCurrentTime = player.currentTime; // seconds
+      // Read player state atomically to avoid race conditions
+      const currentPlayer = player;
+      if (!currentPlayer) {
+        return;
+      }
+
+      const isPlaying = !!currentPlayer.playing;
+      const rawCurrentTime = currentPlayer.currentTime; // seconds
 
       const safeCurrentTimeSec = Number.isFinite(rawCurrentTime) && rawCurrentTime >= 0 ? rawCurrentTime : 0;
+      const positionMs = Math.max(0, Math.floor(safeCurrentTimeSec * 1000));
 
-      usePlayerStore.getState().setPlaybackStatus({
-        isPlaying,
-        positionMs: Math.max(0, Math.floor(safeCurrentTimeSec * 1000)),
-      });
+      // Only update if values have actually changed to prevent unnecessary re-renders
+      const currentState = usePlayerStore.getState();
+      if (currentState.isPlaying !== isPlaying || currentState.positionMs !== positionMs) {
+        usePlayerStore.getState().setPlaybackStatus({
+          isPlaying,
+          positionMs,
+        });
+      }
     } catch (error) {
       console.warn('Error updating playback status:', error);
     }
@@ -186,10 +198,15 @@ export async function togglePlayPause() {
   }
 
   try {
-    if (currentPlayer.playing) {
+    const wasPlaying = currentPlayer.playing;
+    if (wasPlaying) {
       currentPlayer.pause();
+      // Immediately update state to prevent UI glitches
+      usePlayerStore.getState().setPlaybackStatus({ isPlaying: false });
     } else {
       currentPlayer.play();
+      // Immediately update state to prevent UI glitches
+      usePlayerStore.getState().setPlaybackStatus({ isPlaying: true });
     }
   } catch (error) {
     console.error('Error in togglePlayPause:', error);
