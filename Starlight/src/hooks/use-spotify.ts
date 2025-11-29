@@ -1,6 +1,6 @@
 /**
  * TanStack Query hooks for Spotify integration
- * 
+ *
  * These hooks provide reactive data fetching and mutations for Spotify features.
  */
 
@@ -8,16 +8,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import {
-    getSpotifyLoginUrl,
-    getSpotifyPlaylists,
-    getSpotifyPlaylistTracks,
-    getSpotifyStatus,
-    importSpotifyPlaylist,
-    type SpotifyPlaylist,
-    type SpotifyStatus,
-    type SpotifyTrack,
+  getSpotifyLoginUrl,
+  getSpotifyPlaylists,
+  getSpotifyPlaylistTracks,
+  getSpotifyStatus,
+  getSpotifyTokens,
+  importSpotifyPlaylist,
+  type SpotifyPlaylist,
+  type SpotifyStatus,
+  type SpotifyTrack,
 } from '../services/spotify-api-client';
 import { importSpotifyPlaylist as importToLocalDb } from '../services/spotify-import-client';
+import { saveSpotifyTokens } from '../services/spotify-token-storage';
 
 /**
  * Query key factories
@@ -78,7 +80,7 @@ export function useSpotifyLogin() {
   return useMutation({
     mutationFn: async () => {
       const loginUrl = getSpotifyLoginUrl();
-      
+
       // Open in system browser
       const result = await WebBrowser.openAuthSessionAsync(
         loginUrl,
@@ -86,6 +88,18 @@ export function useSpotifyLogin() {
       );
 
       if (result.type === 'success') {
+        // Wait a bit for backend to process callback
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+
+        // Fetch tokens from backend and store in localStorage
+        try {
+          const tokens = await getSpotifyTokens();
+          saveSpotifyTokens(tokens);
+        } catch (error) {
+          console.error('Failed to fetch tokens:', error);
+          // Continue anyway - tokens might be in session
+        }
+
         // Refetch status after successful login
         await queryClient.invalidateQueries({ queryKey: spotifyKeys.status() });
         await queryClient.invalidateQueries({ queryKey: spotifyKeys.playlists() });
@@ -142,8 +156,20 @@ export function useSpotifyAuthCallback() {
   return useMutation({
     mutationFn: async (url: string) => {
       const parsed = Linking.parse(url);
-      
+
       if (parsed.path === 'auth/spotify/success') {
+        // Wait a bit for backend to process callback
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+
+        // Fetch tokens from backend and store in localStorage
+        try {
+          const tokens = await getSpotifyTokens();
+          saveSpotifyTokens(tokens);
+        } catch (error) {
+          console.error('Failed to fetch tokens:', error);
+          // Continue anyway - tokens might be in session
+        }
+
         // Success - refetch status and playlists
         await queryClient.invalidateQueries({ queryKey: spotifyKeys.status() });
         await queryClient.invalidateQueries({ queryKey: spotifyKeys.playlists() });
@@ -158,4 +184,3 @@ export function useSpotifyAuthCallback() {
     },
   });
 }
-

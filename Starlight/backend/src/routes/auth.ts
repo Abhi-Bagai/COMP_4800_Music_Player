@@ -114,6 +114,9 @@ router.get('/spotify/callback', async (ctx: Context) => {
 
     const userId = loginAttempt.userId;
 
+    // Restore userId to session (important for subsequent authenticated requests)
+    ctx.session!.userId = userId;
+
     // Exchange code for tokens
     const tokenResponse = await exchangeCodeForToken(
       code as string,
@@ -184,11 +187,25 @@ router.get('/spotify/callback', async (ctx: Context) => {
       where: { state: state as string },
     });
 
+    // Ensure session is saved with userId before redirect
+    // koa-session will auto-save, but we log to verify
+    if (config.nodeEnv === 'development') {
+      console.log('✓ OAuth callback complete. Session userId:', ctx.session?.userId);
+    }
+
     // Redirect to frontend with success
-    // For web, use the frontend URL; for mobile, use deep link
-    const redirectUrl = config.frontend.url
-      ? `${config.frontend.url}?spotify_auth=success`
-      : `${config.frontend.deepLink}?success=true`;
+    // For web development, use localhost:8081; for production, use configured URL
+    let redirectUrl: string;
+    if (config.nodeEnv === 'development') {
+      // In development, redirect to localhost:8081 (Expo web default)
+      redirectUrl = 'http://localhost:8081/library?spotify_auth=success';
+    } else {
+      redirectUrl = config.frontend.url
+        ? `${config.frontend.url}?spotify_auth=success`
+        : `${config.frontend.deepLink}?success=true`;
+    }
+
+    console.log('Redirecting to:', redirectUrl);
     ctx.redirect(redirectUrl);
   } catch (error) {
     console.error('OAuth callback error:', error);

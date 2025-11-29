@@ -6,8 +6,9 @@
  */
 
 // Support both environment variable names for compatibility
+// Backend runs on port 3001 by default (see backend/src/config.ts)
 const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8081';
+  process.env.EXPO_PUBLIC_API_URL || process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
 /**
  * Spotify connection status
@@ -194,7 +195,67 @@ export function getSpotifyLoginUrl(): string {
 export const checkSpotifyStatus = getSpotifyStatus;
 
 /**
+ * Get Spotify tokens from backend
+ * Returns tokens for storing in localStorage
+ */
+export async function getSpotifyTokens(): Promise<{
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+  scope?: string;
+}> {
+  try {
+    console.log('Fetching tokens from:', `${API_BASE_URL}/api/spotify/tokens`);
+    const response = await fetch(`${API_BASE_URL}/api/spotify/tokens`, {
+      credentials: 'include',
+    });
+
+    console.log('Token fetch response status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Token fetch error response:', errorText);
+      if (response.status === 401) {
+        throw new Error('Not authenticated. Please connect your Spotify account.');
+      }
+      throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+    }
+
+    const tokens = await response.json();
+    console.log('Successfully fetched tokens:', {
+      ...tokens,
+      accessToken: tokens.accessToken?.substring(0, 20) + '...',
+    });
+    return tokens;
+  } catch (error) {
+    console.error('Error fetching Spotify tokens:', error);
+    throw error;
+  }
+}
+
+/**
  * Alias for backward compatibility
  * @deprecated Use getSpotifyLoginUrl instead
  */
 export const getSpotifyAuthUrl = getSpotifyLoginUrl;
+
+/**
+ * Debug function to manually fetch and save tokens
+ * Call this from browser console: window.fetchSpotifyTokens()
+ */
+if (typeof window !== 'undefined') {
+  (window as any).fetchSpotifyTokens = async () => {
+    try {
+      console.log('Manually fetching tokens...');
+      const tokens = await getSpotifyTokens();
+      console.log('Fetched tokens:', tokens);
+      const { saveSpotifyTokens } = await import('./spotify-token-storage');
+      saveSpotifyTokens(tokens);
+      console.log('Tokens saved to localStorage');
+      return tokens;
+    } catch (error) {
+      console.error('Failed to fetch tokens:', error);
+      throw error;
+    }
+  };
+}

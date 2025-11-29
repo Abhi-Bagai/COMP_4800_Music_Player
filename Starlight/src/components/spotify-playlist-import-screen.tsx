@@ -18,11 +18,13 @@ import {
   getSpotifyStatus,
   getSpotifyPlaylists,
   getSpotifyLoginUrl,
+  getSpotifyTokens,
   importSpotifyPlaylist,
   type SpotifyPlaylist,
 } from '@/src/services/spotify-api-client';
-import { createPlaylist } from '@/src/db/playlist-repository';
 import { hydratePlaylistsFromDatabase } from '@/src/services/playlist-service';
+import { importSpotifyPlaylist as importToLocalDb } from '@/src/services/spotify-import-client';
+import { saveSpotifyTokens } from '@/src/services/spotify-token-storage';
 import { usePlaylistStore } from '@/src/state/playlist-store';
 
 interface SpotifyPlaylistImportScreenProps {
@@ -56,10 +58,31 @@ export function SpotifyPlaylistImportScreen({ onBack }: SpotifyPlaylistImportScr
         window.history.replaceState({}, document.title, cleanUrl);
 
         if (success) {
-          // Wait a moment for backend to process, then check status
-          setTimeout(() => {
-            checkAuthStatus();
-          }, 1000);
+          // Wait a moment for backend to process, then fetch tokens and check status
+          setTimeout(async () => {
+            await checkAuthStatus();
+            // Try to fetch tokens after status check (ensures we're authenticated)
+            try {
+              // Fetch tokens from backend and store in localStorage
+              const tokens = await getSpotifyTokens();
+              console.log('Fetched tokens from backend:', tokens);
+              saveSpotifyTokens(tokens);
+              console.log('Tokens saved to localStorage');
+            } catch (error) {
+              console.error('Failed to fetch tokens:', error);
+              // Try again after a longer delay in case session wasn't ready
+              setTimeout(async () => {
+                try {
+                  const tokens = await getSpotifyTokens();
+                  console.log('Retry: Fetched tokens from backend:', tokens);
+                  saveSpotifyTokens(tokens);
+                  console.log('Retry: Tokens saved to localStorage');
+                } catch (retryError) {
+                  console.error('Retry failed to fetch tokens:', retryError);
+                }
+              }, 2000);
+            }
+          }, 1500);
           return;
         }
       }
@@ -80,6 +103,18 @@ export function SpotifyPlaylistImportScreen({ onBack }: SpotifyPlaylistImportScr
         });
         // Fetch playlists if authenticated
         await loadPlaylists();
+
+        // Also try to fetch and save tokens if we're authenticated
+        try {
+          const tokens = await getSpotifyTokens();
+          if (tokens) {
+            console.log('Fetched tokens after status check:', tokens);
+            saveSpotifyTokens(tokens);
+            console.log('Tokens saved to localStorage after status check');
+          }
+        } catch (tokenError) {
+          console.error('Failed to fetch tokens after status check:', tokenError);
+        }
       }
     } catch (error) {
       console.error('Error checking auth status:', error);
@@ -122,6 +157,14 @@ export function SpotifyPlaylistImportScreen({ onBack }: SpotifyPlaylistImportScr
         if (result.type === 'success') {
           // Wait a bit for backend to process callback
           await new Promise((resolve) => setTimeout(resolve, 1500));
+          try {
+            // Fetch tokens from backend and store in localStorage
+            const tokens = await getSpotifyTokens();
+            saveSpotifyTokens(tokens);
+          } catch (error) {
+            console.error('Failed to fetch tokens:', error);
+            // Continue anyway - tokens might be in session
+          }
           await checkAuthStatus();
         } else if (result.type === 'cancel') {
           // User cancelled
@@ -163,19 +206,19 @@ export function SpotifyPlaylistImportScreen({ onBack }: SpotifyPlaylistImportScr
           const playlist = spotifyPlaylists.find((p) => p.id === playlistId);
           if (!playlist) continue;
 
-          // Import playlist data from Spotify
+          // Fetch playlist data from Spotify backend
           const importResult = await importSpotifyPlaylist(playlistId, playlist.name);
 
-          // Create local playlist
-          const localPlaylistId = await createPlaylist({
-            name: playlist.name,
-            description: playlist.description ?? undefined,
-            coverImageUri: playlist.image ?? undefined,
-          });
-
-          // TODO: Import tracks into the playlist
-          // For now, we just create the playlist structure
-          // You'll need to add tracks to the playlist using your playlist service
+          // Import into local SQLite database (creates playlist and tracks)
+          await importToLocalDb(
+            playlistId,
+            importResult.playlistName,
+            importResult.tracks.map((track, index) => ({
+              ...track,
+              position: track.position ?? index,
+            })),
+            playlist.image ?? undefined
+          );
 
           successCount++;
         } catch (error) {

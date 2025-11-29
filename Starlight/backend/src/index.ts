@@ -18,6 +18,8 @@ app.use(
       maxAge: 86400000, // 24 hours
       httpOnly: true,
       signed: true,
+      // Allow session cookie to be sent cross-origin in development
+      sameSite: config.nodeEnv === 'development' ? 'lax' : 'strict',
     },
     app
   )
@@ -27,8 +29,28 @@ app.use(
 app.use(bodyParser());
 
 // CORS (adjust for production)
+// When using credentials, we cannot use '*' - must specify exact origins
+const allowedOrigins = [
+  'http://localhost:8081',
+  'http://localhost:19006', // Expo web default
+  'http://127.0.0.1:8081',
+  'http://127.0.0.1:19006',
+  config.frontend.url, // Production frontend URL
+].filter(Boolean);
+
 app.use(async (ctx, next) => {
-  ctx.set('Access-Control-Allow-Origin', '*'); // Configure properly in production
+  const origin = ctx.headers.origin;
+
+  // Check if origin is allowed
+  if (origin && allowedOrigins.includes(origin)) {
+    ctx.set('Access-Control-Allow-Origin', origin);
+  } else if (config.nodeEnv === 'development' && origin) {
+    // In development, allow any localhost origin
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      ctx.set('Access-Control-Allow-Origin', origin);
+    }
+  }
+
   ctx.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   ctx.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   ctx.set('Access-Control-Allow-Credentials', 'true');
@@ -41,19 +63,28 @@ app.use(async (ctx, next) => {
   await next();
 });
 
-// TODO: Add session middleware that sets ctx.state.user from session
-// For now, you'll need to implement this based on your auth system
-// Example:
-// app.use(async (ctx, next) => {
-//   const userId = ctx.session?.userId;
-//   if (userId) {
-//     const user = await prisma.user.findUnique({ where: { id: userId } });
-//     if (user) {
-//       ctx.state.user = { id: user.id, email: user.email, name: user.name };
-//     }
-//   }
-//   await next();
-// });
+// Session middleware that sets ctx.state.user from session
+app.use(async (ctx, next) => {
+  const userId = ctx.session?.userId;
+  if (userId) {
+    const { prisma } = await import('./db/client');
+    try {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (user) {
+        ctx.state.user = { id: user.id, email: user.email, name: user.name };
+        if (config.nodeEnv === 'development') {
+          console.log('✓ User loaded from session:', userId);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user from session:', error);
+      // Continue without user - will fail auth checks
+    }
+  } else if (config.nodeEnv === 'development') {
+    console.log('⚠ No userId in session. Session:', ctx.session ? 'exists' : 'missing');
+  }
+  await next();
+});
 
 // Routes
 app.use(testRoutes.routes()).use(testRoutes.allowedMethods());
@@ -69,6 +100,7 @@ if (config.nodeEnv === 'development') {
   console.log('  - GET  /auth/spotify/login');
   console.log('  - GET  /auth/spotify/callback');
   console.log('  - GET  /api/spotify/status');
+  console.log('  - GET  /api/spotify/tokens');
   console.log('  - GET  /api/spotify/playlists');
 }
 

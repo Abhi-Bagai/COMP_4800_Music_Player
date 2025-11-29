@@ -4,14 +4,11 @@ import { getCurrentUserId, requireAuth } from '../middleware/auth';
 import { invalidateUserCache } from '../services/api-cache';
 import { fetchWithSpotifyCache } from '../services/spotify-cache-wrapper';
 import { getValidSpotifyAccessToken, hasSpotifyAccount } from '../services/spotify-token';
-import type {
-    SpotifyPlaylist,
-    SpotifyPlaylistTrack,
-} from '../utils/spotify-api';
+import type { SpotifyPlaylist, SpotifyPlaylistTrack } from '../utils/spotify-api';
 import {
-    fetchPlaylistTracks,
-    fetchSpotifyUserProfile,
-    fetchUserPlaylists,
+  fetchPlaylistTracks,
+  fetchSpotifyUserProfile,
+  fetchUserPlaylists,
 } from '../utils/spotify-api';
 
 const router = new Router({ prefix: '/api/spotify' });
@@ -53,6 +50,52 @@ router.get('/status', requireAuth, async (ctx: Context) => {
 });
 
 /**
+ * GET /api/spotify/tokens
+ * Returns Spotify access and refresh tokens for the current user
+ * (For storing in localStorage on the frontend)
+ */
+router.get('/tokens', requireAuth, async (ctx: Context) => {
+  const userId = getCurrentUserId(ctx);
+  console.log('Token request from userId:', userId);
+  const linked = await hasSpotifyAccount(userId);
+
+  if (!linked) {
+    ctx.status = 401;
+    ctx.body = { error: 'Spotify account not linked' };
+    return;
+  }
+
+  try {
+    const accessToken = await getValidSpotifyAccessToken(userId);
+
+    // Get account info to return tokens
+    const { prisma } = await import('../db/client');
+    const account = await prisma.spotifyAccount.findUnique({
+      where: { userId },
+    });
+
+    if (!account) {
+      ctx.status = 404;
+      ctx.body = { error: 'Spotify account not found' };
+      return;
+    }
+
+    ctx.body = {
+      accessToken: account.accessToken,
+      refreshToken: account.refreshToken,
+      expiresAt: account.expiresAt.getTime(), // Convert to Unix timestamp
+      scope: account.scope,
+    };
+  } catch (error) {
+    ctx.status = 500;
+    ctx.body = {
+      error: 'Failed to retrieve tokens',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+});
+
+/**
  * GET /api/spotify/playlists
  * Returns user's Spotify playlists
  */
@@ -64,16 +107,12 @@ router.get('/playlists', requireAuth, async (ctx: Context) => {
       items: SpotifyPlaylist[];
       total: number;
       next: string | null;
-    }>(
-      userId,
-      'playlists',
-      async (accessToken) => {
-        // Fetch first page (50 playlists)
-        // For v1, we'll just return the first page
-        // Client can request more if needed
-        return fetchUserPlaylists(accessToken, 50, 0);
-      }
-    );
+    }>(userId, 'playlists', async (accessToken) => {
+      // Fetch first page (50 playlists)
+      // For v1, we'll just return the first page
+      // Client can request more if needed
+      return fetchUserPlaylists(accessToken, 50, 0);
+    });
 
     // Sanitize response for frontend
     const playlists = result.items.map((playlist) => ({
@@ -163,7 +202,7 @@ router.get('/playlists/:id/tracks', requireAuth, async (ctx: Context) => {
 /**
  * POST /api/spotify/playlists/:id/import
  * Imports a Spotify playlist into the local Starlight database
- * 
+ *
  * Returns data ready for client-side import into local SQLite DB
  */
 router.post('/playlists/:id/import', requireAuth, async (ctx: Context) => {
@@ -188,12 +227,7 @@ router.post('/playlists/:id/import', requireAuth, async (ctx: Context) => {
 
     while (hasMore && tracks.length < 1000) {
       // Limit to 1000 tracks for v1
-      const response = await fetchPlaylistTracks(
-        accessToken,
-        playlistId,
-        100,
-        offset
-      );
+      const response = await fetchPlaylistTracks(accessToken, playlistId, 100, offset);
       tracks.push(...response.items.filter((item) => item.track !== null));
       hasMore = !!response.next;
       offset += 100;
@@ -237,4 +271,3 @@ router.post('/playlists/:id/import', requireAuth, async (ctx: Context) => {
 });
 
 export default router;
-
