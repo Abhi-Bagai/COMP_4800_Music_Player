@@ -195,6 +195,33 @@ export function getSpotifyLoginUrl(): string {
 export const checkSpotifyStatus = getSpotifyStatus;
 
 /**
+ * Get all user's saved Spotify tracks (liked songs)
+ */
+export async function getAllSpotifyTracks(): Promise<{
+  tracks: SpotifyTrack[];
+  total: number;
+  hasMore: boolean;
+}> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/spotify/tracks`, {
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Not authenticated. Please connect your Spotify account.');
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching Spotify tracks:', error);
+    throw error;
+  }
+}
+
+/**
  * Get Spotify tokens from backend
  * Returns tokens for storing in localStorage
  */

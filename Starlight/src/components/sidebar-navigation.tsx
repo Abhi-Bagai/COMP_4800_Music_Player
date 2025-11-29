@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
-import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Folder, Music } from "lucide-react-native";
-import { Text } from "@/src/components/ui/text";
-import { usePlaylistStore } from "@/src/state/playlist-store";
-import { useLibraryStore } from "@/src/state/library-store";
-import { useDrag } from "@/src/contexts/drag-context";
-import { useTheme } from "@/src/theme/provider";
-import { Platform } from "react-native";
-import { getPlaylistWithTracks } from "@/src/db/playlist-repository";
-import type { PlaylistWithTracks } from "@/src/db/playlist-repository";
-import type { LibraryTrack } from "@/src/db";
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Folder, Music } from 'lucide-react-native';
+import { Text } from '@/src/components/ui/text';
+import { usePlaylistStore } from '@/src/state/playlist-store';
+import { useLibraryStore } from '@/src/state/library-store';
+import { useDrag } from '@/src/contexts/drag-context';
+import { useTheme } from '@/src/theme/provider';
+import { Platform } from 'react-native';
+import { getPlaylistWithTracks } from '@/src/db/playlist-repository';
+import type { PlaylistWithTracks } from '@/src/db/playlist-repository';
+import type { LibraryTrack } from '@/src/db';
 
 interface SidebarNavigationProps {
   onViewChange: (view: string) => void;
@@ -30,35 +30,35 @@ interface NavigationItem {
 
 const navigationItems: NavigationItem[] = [
   {
-    id: "library",
-    label: "Library",
-    icon: "folder",
+    id: 'library',
+    label: 'Library',
+    icon: 'folder',
   },
   {
-    id: "artists",
-    label: "Artists",
-    icon: "folder",
+    id: 'artists',
+    label: 'Artists',
+    icon: 'folder',
   },
   {
-    id: "albums",
-    label: "Albums",
-    icon: "folder",
+    id: 'albums',
+    label: 'Albums',
+    icon: 'folder',
   },
   {
-    id: "playlists",
-    label: "Playlists",
-    icon: "folder",
+    id: 'playlists',
+    label: 'Playlists',
+    icon: 'folder',
   },
   {
-    id: "spotify-playlists",
-    label: "Get Spotify Playlists",
-    icon: "cloud",
+    id: 'spotify-playlists',
+    label: 'Spotify',
+    icon: 'cloud',
   },
   {
-    id: "genres",
-    label: "Genres",
-    icon: "folder",
-  }
+    id: 'genres',
+    label: 'Genres',
+    icon: 'folder',
+  },
 ];
 
 export function SidebarNavigation({
@@ -146,20 +146,12 @@ export function SidebarNavigation({
               paddingLeft: 16 + level * 16,
             },
           ]}
-          onPress={handleItemClick}
-        >
+          onPress={handleItemClick}>
           <View style={[styles.navItemContent, styles.mainNavItemContent]}>
-            {item.icon === "folder" ? (
-              <Folder
-                size={16}
-                color={tokens.colors.text}
-              />
+            {item.icon === 'folder' ? (
+              <Folder size={16} color={tokens.colors.text} />
             ) : (
-              <IconSymbol
-                name={item.icon as any}
-                size={16}
-                color={tokens.colors.text}
-              />
+              <IconSymbol name={item.icon as any} size={16} color={tokens.colors.text} />
             )}
             <Text
               style={[
@@ -173,16 +165,11 @@ export function SidebarNavigation({
             {hasChildren && (
               <Pressable
                 onPress={handleChevronClick}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <IconSymbol
-                  name={isExpanded ? "chevron.up" : "chevron.down"}
+                  name={isExpanded ? 'chevron.up' : 'chevron.down'}
                   size={12}
-                  color={
-                    isSelected
-                      ? tokens.colors.primary
-                      : tokens.colors.subtleText
-                  }
+                  color={isSelected ? tokens.colors.primary : tokens.colors.subtleText}
                 />
               </Pressable>
             )}
@@ -223,9 +210,7 @@ export function SidebarNavigation({
   };
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: tokens.colors.sidebar }]}
-    >
+    <View style={[styles.container, { backgroundColor: tokens.colors.sidebar }]}>
       {/* Search Bar */}
       <View style={[styles.searchContainer, { backgroundColor: tokens.colors.surfaceElevated }]}>
         <IconSymbol name="magnifyingglass" size={16} color={tokens.colors.subtleText} />
@@ -412,45 +397,47 @@ function SidebarPlaylistNavItem({
     handleToggleExpand();
   };
 
-  const handleTrackClick = useCallback((playlistTrack: PlaylistWithTracks['tracks'][0]) => {
-    if (onTrackPlay && playlistTrack.track) {
-      // Try to find the full track in the library store by ID
-      const fullTrack = libraryTracks.find((t) => t.id === playlistTrack.track.id);
-      
-      if (fullTrack) {
-        // Use the full track from library store which has all required fields
-        onTrackPlay(fullTrack);
-      } else {
-        // Fallback: if track not found in library, we can't play it reliably
-        // This shouldn't happen in normal operation, but handle gracefully
-        console.warn('Track not found in library store:', playlistTrack.track.id);
+  const handleTrackClick = useCallback(
+    (playlistTrack: PlaylistWithTracks['tracks'][0]) => {
+      if (onTrackPlay && playlistTrack.track) {
+        // Try to find the full track in the library store by ID
+        const fullTrack = libraryTracks.find((t) => t.id === playlistTrack.track.id);
+
+        if (fullTrack) {
+          // Use the full track from library store which has all required fields
+          onTrackPlay(fullTrack);
+        } else {
+          // Fallback: if track not found in library, we can't play it reliably
+          // This shouldn't happen in normal operation, but handle gracefully
+          console.warn('Track not found in library store:', playlistTrack.track.id);
+        }
       }
-    }
-  }, [onTrackPlay, libraryTracks]);
+    },
+    [onTrackPlay, libraryTracks]
+  );
 
   return (
     <View
       ref={containerRef}
       onLayout={updateDropZoneLayout}
-      nativeID={Platform.OS === "web" ? `playlist-drop-${playlist.id}` : undefined}
-    >
+      nativeID={Platform.OS === 'web' ? `playlist-drop-${playlist.id}` : undefined}>
       <View>
         <Pressable
           style={({ pressed }) => [
             styles.navItem,
             {
-              backgroundColor: isHovered && isDragged
-                ? tokens.colors.primaryMutedBg
-                : pressed
-                ? tokens.colors.surfaceElevated
-                : "transparent",
+              backgroundColor:
+                isHovered && isDragged
+                  ? tokens.colors.primaryMutedBg
+                  : pressed
+                    ? tokens.colors.surfaceElevated
+                    : 'transparent',
               paddingLeft: 16 + level * 16,
               borderWidth: isHovered && isDragged ? 1 : 0,
-              borderColor: isHovered && isDragged ? tokens.colors.primary : "transparent",
+              borderColor: isHovered && isDragged ? tokens.colors.primary : 'transparent',
             },
           ]}
-          onPress={handlePlaylistClick}
-        >
+          onPress={handlePlaylistClick}>
           <View style={[styles.navItemContent, styles.mainNavItemContent]}>
             <IconSymbol
               name="music.note.list"
@@ -471,10 +458,9 @@ function SidebarPlaylistNavItem({
             {playlist.trackCount > 0 && (
               <Pressable
                 onPress={handleChevronClick}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <IconSymbol
-                  name={isExpanded ? "chevron.up" : "chevron.down"}
+                  name={isExpanded ? 'chevron.up' : 'chevron.down'}
                   size={12}
                   color={tokens.colors.subtleText}
                 />
@@ -487,9 +473,7 @@ function SidebarPlaylistNavItem({
           <View style={styles.childrenContainer}>
             {isLoadingTracks ? (
               <View style={[styles.navItemContent, { paddingLeft: 16 + (level + 1) * 16 }]}>
-                <Text style={{ color: tokens.colors.subtleText, fontSize: 12 }}>
-                  Loading...
-                </Text>
+                <Text style={{ color: tokens.colors.subtleText, fontSize: 12 }}>Loading...</Text>
               </View>
             ) : playlistTracks.length > 0 ? (
               playlistTracks.map((playlistTrack) => (
@@ -498,28 +482,23 @@ function SidebarPlaylistNavItem({
                   style={({ pressed }) => [
                     styles.navItem,
                     {
-                      backgroundColor: pressed ? tokens.colors.surfaceElevated : "transparent",
+                      backgroundColor: pressed ? tokens.colors.surfaceElevated : 'transparent',
                       paddingLeft: 16 + (level + 1) * 16,
                     },
                   ]}
-                  onPress={() => handleTrackClick(playlistTrack)}
-                >
+                  onPress={() => handleTrackClick(playlistTrack)}>
                   <View style={[styles.navItemContent, styles.mainNavItemContent]}>
-                    <Music
-                      size={12}
-                      color={tokens.colors.subtleText}
-                    />
+                    <Music size={12} color={tokens.colors.subtleText} />
                     <Text
                       style={[
                         styles.navItemText,
                         {
                           color: tokens.colors.subtleText,
                           fontSize: 13,
-                          fontWeight: "400",
+                          fontWeight: '400',
                         },
                       ]}
-                      numberOfLines={1}
-                    >
+                      numberOfLines={1}>
                       {playlistTrack.track.title}
                       {playlistTrack.track.artist && ` • ${playlistTrack.track.artist.name}`}
                     </Text>
@@ -528,9 +507,7 @@ function SidebarPlaylistNavItem({
               ))
             ) : (
               <View style={[styles.navItemContent, { paddingLeft: 16 + (level + 1) * 16 }]}>
-                <Text style={{ color: tokens.colors.subtleText, fontSize: 12 }}>
-                  No tracks
-                </Text>
+                <Text style={{ color: tokens.colors.subtleText, fontSize: 12 }}>No tracks</Text>
               </View>
             )}
           </View>

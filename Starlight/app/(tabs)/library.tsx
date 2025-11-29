@@ -3,27 +3,32 @@ import { Alert, FlatList, Modal, Platform, Pressable, StyleSheet, View } from 'r
 import { PanGestureHandler, Swipeable } from 'react-native-gesture-handler';
 import * as DocumentPicker from 'expo-document-picker';
 
-import { useTheme } from "@/src/theme/provider";
+import { useTheme } from '@/src/theme/provider';
 
-import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Settings } from "lucide-react-native";
-import { AddToPlaylistModal } from "@/src/components/add-to-playlist-modal";
-import { AlbumsScreen } from "@/src/components/albums-screen";
-import { ArtistsScreen } from "@/src/components/artists-screen";
-import { PlaylistsScreen } from "@/src/components/playlists-screen";
-import { SpotifyPlaylistImportScreen } from "@/src/components/spotify-playlist-import-screen";
-import { MiniPlayer } from "@/src/components/mini-player";
-import { PlaylistCreationModal } from "@/src/components/playlist-creation-modal";
-import { PlaylistDetailScreen } from "@/src/components/playlist-detail-screen";
-import { SidebarNavigation } from "@/src/components/sidebar-navigation";
-import { TableView } from "@/src/components/table-view";
-import { TagManager } from "@/src/components/tag-manager";
-import { DragOverlay } from "@/src/components/drag-overlay";
-import { Button } from "@/src/components/ui/button";
-import { DropdownMenu } from "@/src/components/ui/dropdown-menu";
-import { Text } from "@/src/components/ui/text";
-import { StarlightLogo } from "@/src/components/starlight-logo";
-import { FileScanner } from "@/src/services/file-scanner";
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Settings } from 'lucide-react-native';
+import { AddToPlaylistModal } from '@/src/components/add-to-playlist-modal';
+import { AlbumsScreen } from '@/src/components/albums-screen';
+import { ArtistsScreen } from '@/src/components/artists-screen';
+import { PlaylistsScreen } from '@/src/components/playlists-screen';
+import { SpotifyPlaylistImportScreen } from '@/src/components/spotify-playlist-import-screen';
+import {
+  getAllSpotifyTracks,
+  getSpotifyStatus,
+  type SpotifyTrack,
+} from '@/src/services/spotify-api-client';
+import { MiniPlayer } from '@/src/components/mini-player';
+import { PlaylistCreationModal } from '@/src/components/playlist-creation-modal';
+import { PlaylistDetailScreen } from '@/src/components/playlist-detail-screen';
+import { SidebarNavigation } from '@/src/components/sidebar-navigation';
+import { TableView } from '@/src/components/table-view';
+import { TagManager } from '@/src/components/tag-manager';
+import { DragOverlay } from '@/src/components/drag-overlay';
+import { Button } from '@/src/components/ui/button';
+import { DropdownMenu } from '@/src/components/ui/dropdown-menu';
+import { Text } from '@/src/components/ui/text';
+import { StarlightLogo } from '@/src/components/starlight-logo';
+import { FileScanner } from '@/src/services/file-scanner';
 import {
   clearLibrary,
   deleteTrack,
@@ -53,15 +58,69 @@ export default function HomeScreen() {
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [showGearMenu, setShowGearMenu] = useState(false);
   const [showAddMusicMenu, setShowAddMusicMenu] = useState(false);
-  const [trackTags, setTrackTags] = useState<{[trackId: string]: string[]}>({});
-  const [searchText, setSearchText] = useState("");
+  const [trackTags, setTrackTags] = useState<{ [trackId: string]: string[] }>({});
+  const [searchText, setSearchText] = useState('');
   const [isOptionsHovered, setIsOptionsHovered] = useState(false);
+  const [spotifyTracks, setSpotifyTracks] = useState<any[]>([]);
+  const [isLoadingSpotifyTracks, setIsLoadingSpotifyTracks] = useState(false);
+  const [spotifyConnected, setSpotifyConnected] = useState(false);
 
   useEffect(() => {
     hydrateLibraryFromDatabase();
     hydratePlaylistsFromDatabase();
     loadTrackTags();
+    checkSpotifyConnection();
   }, []);
+
+  // Load Spotify tracks when Spotify view is selected
+  useEffect(() => {
+    if (sidebarView === 'spotify-playlists' && spotifyConnected && spotifyTracks.length === 0) {
+      loadSpotifyTracks();
+    }
+  }, [sidebarView, spotifyConnected]);
+
+  const checkSpotifyConnection = async () => {
+    try {
+      const status = await getSpotifyStatus();
+      setSpotifyConnected(status.linked);
+    } catch (error) {
+      console.error('Error checking Spotify status:', error);
+      setSpotifyConnected(false);
+    }
+  };
+
+  const loadSpotifyTracks = async () => {
+    if (!spotifyConnected) return;
+
+    setIsLoadingSpotifyTracks(true);
+    try {
+      const result = await getAllSpotifyTracks();
+      // Convert Spotify tracks to LibraryTrack format for TableView
+      const convertedTracks = result.tracks.map((track: SpotifyTrack) => ({
+        id: `spotify:${track.spotifyTrackId}`,
+        title: track.name,
+        durationMs: track.durationMs,
+        fileUri: track.previewUrl || track.spotifyUri,
+        artist: {
+          id: `spotify:artist:${track.artists[0] || 'unknown'}`,
+          name: track.artists.join(', '),
+        },
+        album: {
+          id: `spotify:album:${track.albumName}`,
+          title: track.albumName,
+          artworkUri: track.albumImage,
+        },
+        // Store original Spotify data for reference
+        spotifyData: track,
+      }));
+      setSpotifyTracks(convertedTracks);
+    } catch (error) {
+      console.error('Error loading Spotify tracks:', error);
+      Alert.alert('Error', 'Failed to load Spotify tracks');
+    } finally {
+      setIsLoadingSpotifyTracks(false);
+    }
+  };
 
   const loadTrackTags = async () => {
     try {
@@ -440,11 +499,10 @@ export default function HomeScreen() {
               onHoverIn: () => setIsOptionsHovered(true),
               onHoverOut: () => setIsOptionsHovered(false),
             })}
-            accessibilityLabel="Settings"
-          >
-            <Settings 
-              size={18} 
-              color={isOptionsHovered ? tokens.colors.text : tokens.colors.iconMuted} 
+            accessibilityLabel="Settings">
+            <Settings
+              size={18}
+              color={isOptionsHovered ? tokens.colors.text : tokens.colors.iconMuted}
             />
           </Pressable>
         </View>
@@ -536,14 +594,70 @@ export default function HomeScreen() {
                 </Button>
               </View>
             )
-          ) : sidebarView === "artists" ? (
-            <ArtistsScreen onBack={() => setSidebarView("library")} />
-          ) : sidebarView === "albums" ? (
-            <AlbumsScreen onBack={() => setSidebarView("library")} />
-          ) : sidebarView === "playlists" ? (
+          ) : sidebarView === 'artists' ? (
+            <ArtistsScreen onBack={() => setSidebarView('library')} />
+          ) : sidebarView === 'albums' ? (
+            <AlbumsScreen onBack={() => setSidebarView('library')} />
+          ) : sidebarView === 'playlists' ? (
             <PlaylistsScreen onPlaylistPress={handlePlaylistPress} />
           ) : sidebarView === 'spotify-playlists' ? (
-            <SpotifyPlaylistImportScreen onBack={() => setSidebarView('library')} />
+            spotifyConnected ? (
+              isLoadingSpotifyTracks ? (
+                <View style={styles.placeholderView}>
+                  <Text style={[styles.placeholderText, { color: tokens.colors.text }]}>
+                    Loading Spotify tracks...
+                  </Text>
+                </View>
+              ) : spotifyTracks.length > 0 ? (
+                <TableView
+                  tracks={spotifyTracks}
+                  searchText={searchText}
+                  onTrackPlay={(track) => {
+                    // For Spotify tracks, we can only play preview URLs if available
+                    if (track.spotifyData?.previewUrl) {
+                      playTrack(track);
+                    } else {
+                      Alert.alert(
+                        'Preview Not Available',
+                        'This track does not have a preview. Open in Spotify to play the full track.'
+                      );
+                    }
+                  }}
+                  onTrackTag={(track) => {
+                    // Tags might not work for Spotify tracks, but we can try
+                    const actualTrack = spotifyTracks.find((t) => t.id === track.id);
+                    if (actualTrack) {
+                      setSelectedTrackForTagging(actualTrack);
+                      setShowTagManager(true);
+                    }
+                  }}
+                  onBulkDelete={() => {
+                    Alert.alert(
+                      'Info',
+                      'Cannot delete Spotify tracks. They are from your Spotify account.'
+                    );
+                  }}
+                  onBulkAddToPlaylist={(tracks) => {
+                    console.log(
+                      'Bulk add Spotify tracks to playlist:',
+                      tracks.map((t) => t.title)
+                    );
+                    // TODO: Implement adding Spotify tracks to local playlists
+                  }}
+                />
+              ) : (
+                <View style={styles.placeholderView}>
+                  <Text style={[styles.placeholderText, { color: tokens.colors.text }]}>
+                    No Spotify tracks found. Try refreshing.
+                  </Text>
+                  <Button onPress={loadSpotifyTracks} className="mt-4">
+                    Refresh
+                  </Button>
+                </View>
+              )
+            ) : (
+              <SpotifyPlaylistImportScreen onBack={() => setSidebarView('library')} />
+            )
           ) : sidebarView === 'genres' ? (
             <View style={styles.placeholderView}>
               <Text style={[styles.placeholderText, { color: tokens.colors.text }]}>
@@ -655,19 +769,12 @@ export default function HomeScreen() {
               onPress={() => {
                 setShowGearMenu(false);
                 setShowAddMusicMenu(true);
-              }}
-            >
+              }}>
               <View className="flex-row items-center">
-                <View className="w-5 items-center mr-3">
-                  <IconSymbol
-                    name="plus"
-                    size={16}
-                    color={tokens.colors.text}
-                  />
+                <View className="mr-3 w-5 items-center">
+                  <IconSymbol name="plus" size={16} color={tokens.colors.text} />
                 </View>
-                <Text className="text-foreground text-sm font-medium">
-                  Add Music
-                </Text>
+                <Text className="text-sm font-medium text-foreground">Add Music</Text>
               </View>
             </Pressable>
             <Pressable

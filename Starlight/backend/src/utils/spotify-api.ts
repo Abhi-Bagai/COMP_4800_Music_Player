@@ -188,3 +188,51 @@ export async function fetchPlaylistTracks(
 
   return response.json();
 }
+
+/**
+ * Fetch user's saved tracks (liked songs)
+ */
+export async function fetchSavedTracks(
+  accessToken: string,
+  limit: number = 50,
+  offset: number = 0
+): Promise<{
+  items: Array<{
+    track: {
+      id: string;
+      name: string;
+      artists: Array<{ name: string }>;
+      album: {
+        name: string;
+        images: Array<{ url: string }>;
+      };
+      duration_ms: number;
+      preview_url: string | null;
+      external_urls: {
+        spotify: string;
+      };
+      uri: string;
+    };
+    added_at: string;
+  }>;
+  total: number;
+  next: string | null;
+}> {
+  const url = new URL(`${config.spotify.apiUrl}/me/tracks`);
+  url.searchParams.set('limit', limit.toString());
+  url.searchParams.set('offset', offset.toString());
+  url.searchParams.set('market', 'US');
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to fetch saved tracks: ${error}`);
+  }
+
+  return response.json();
+}

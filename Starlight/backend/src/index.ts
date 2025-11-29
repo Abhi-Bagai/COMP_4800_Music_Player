@@ -101,6 +101,7 @@ if (config.nodeEnv === 'development') {
   console.log('  - GET  /auth/spotify/callback');
   console.log('  - GET  /api/spotify/status');
   console.log('  - GET  /api/spotify/tokens');
+  console.log('  - GET  /api/spotify/tracks');
   console.log('  - GET  /api/spotify/playlists');
 }
 

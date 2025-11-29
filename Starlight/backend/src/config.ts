@@ -25,6 +25,7 @@ export const config = {
       'user-read-email',
       'playlist-read-private',
       'playlist-read-collaborative',
+      'user-library-read', // Required for /me/tracks (saved tracks)
     ].join(' '),
   },
 

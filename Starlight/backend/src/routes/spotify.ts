@@ -1,5 +1,6 @@
 import { Context } from 'koa';
 import Router from 'koa-router';
+import { config } from '../config';
 import { getCurrentUserId, requireAuth } from '../middleware/auth';
 import { invalidateUserCache } from '../services/api-cache';
 import { fetchWithSpotifyCache } from '../services/spotify-cache-wrapper';
@@ -195,6 +196,92 @@ router.get('/playlists/:id/tracks', requireAuth, async (ctx: Context) => {
     ctx.body = {
       error: 'Failed to fetch playlist tracks',
       message: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+});
+
+/**
+ * GET /api/spotify/tracks
+ * Returns all user's saved Spotify tracks (liked songs)
+ */
+router.get('/tracks', requireAuth, async (ctx: Context) => {
+  const userId = getCurrentUserId(ctx);
+
+  try {
+    const result = await fetchWithSpotifyCache<{
+      items: Array<{
+        track: {
+          id: string;
+          name: string;
+          artists: Array<{ name: string }>;
+          album: {
+            name: string;
+            images: Array<{ url: string }>;
+          };
+          duration_ms: number;
+          preview_url: string | null;
+          external_urls: {
+            spotify: string;
+          };
+          uri: string;
+        };
+        added_at: string;
+      }>;
+      total: number;
+      next: string | null;
+    }>(userId, 'saved-tracks', async (accessToken) => {
+      // Fetch all saved tracks (handle pagination)
+      const allTracks: any[] = [];
+      let offset = 0;
+      let hasMore = true;
+      const limit = 50; // Spotify API limit
+
+      while (hasMore && allTracks.length < 1000) {
+        // Limit to 1000 tracks for v1
+        const { fetchSavedTracks } = await import('../utils/spotify-api');
+        const response = await fetchSavedTracks(accessToken, limit, offset);
+        // Filter out null tracks (Spotify sometimes returns null)
+        const validTracks = response.items.filter((item) => item.track !== null);
+        allTracks.push(...validTracks);
+        hasMore = !!response.next;
+        offset += limit;
+      }
+
+      return {
+        items: allTracks,
+        total: allTracks.length,
+        next: null,
+      };
+    });
+
+    // Sanitize tracks for frontend (filter out null tracks)
+    const tracks = result.items
+      .filter((item) => item.track !== null && item.track !== undefined)
+      .map((item) => ({
+        spotifyTrackId: item.track.id,
+        name: item.track.name,
+        artists: item.track.artists?.map((a) => a.name) || [],
+        albumName: item.track.album?.name || 'Unknown Album',
+        albumImage: item.track.album?.images?.[0]?.url || null,
+        durationMs: item.track.duration_ms || 0,
+        spotifyUri: item.track.uri,
+        spotifyUrl: item.track.external_urls?.spotify || '',
+        previewUrl: item.track.preview_url || null,
+        addedAt: item.added_at,
+      }));
+
+    ctx.body = {
+      tracks,
+      total: result.total,
+      hasMore: !!result.next,
+    };
+  } catch (error) {
+    console.error('Error fetching Spotify tracks:', error);
+    ctx.status = 500;
+    ctx.body = {
+      error: 'Failed to fetch Spotify tracks',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: config.nodeEnv === 'development' && error instanceof Error ? error.stack : undefined,
     };
   }
 });
