@@ -13,6 +13,10 @@ import {
   idbFindTrackByFile,
   idbCheckTrackExists,
   idbUpdateTrackDuration,
+  idbFindTrackByTitleAndArtist,
+  idbUpdateTrackMetadata,
+  type TrackMetadata as IdbTrackMetadata,
+  type TrackMetadataUpdate as IdbTrackMetadataUpdate,
 } from './indexeddb';
 
 export interface ArtistUpsert {
@@ -41,6 +45,8 @@ export interface TrackUpsert {
   trackNumber?: number | null;
   bitrate?: number | null;
   sampleRate?: number | null;
+  genre?: string | null;
+  artworkUri?: string | null;
   fileUri: string;
   fileMtime?: number | null;
   fileSize?: number | null;
@@ -85,6 +91,8 @@ async function upsertLibraryBatchWeb({ artists, albums, tracks }: LibraryBatchUp
       trackNumber: track.trackNumber ?? null,
       bitrate: track.bitrate ?? null,
       sampleRate: track.sampleRate ?? null,
+      genre: track.genre ?? null,
+      artworkUri: track.artworkUri ?? null,
       fileUri: track.fileUri,
       fileMtime: track.fileMtime ?? null,
       fileSize: track.fileSize ?? null,
@@ -147,6 +155,8 @@ export async function upsertLibraryBatch({ artists, albums, tracks }: LibraryBat
           durationMs: track.durationMs ?? null,
           bitrate: track.bitrate ?? null,
           sampleRate: track.sampleRate ?? null,
+          genre: track.genre ?? null,
+          artworkUri: track.artworkUri ?? null,
           fileMtime: track.fileMtime ?? null,
           fileSize: track.fileSize ?? null,
           hash: track.hash ?? null,
@@ -212,7 +222,29 @@ export async function fetchLibrarySnapshot() {
       artist: true,
     },
   });
-  return allTracks;
+  
+  // Parse genres from JSON string to array for each track
+  return allTracks.map((track) => {
+    let genres: string[] | null = null;
+    if (track.genre) {
+      try {
+        const parsed = JSON.parse(track.genre);
+        if (Array.isArray(parsed)) {
+          genres = parsed;
+        } else if (typeof parsed === 'string') {
+          // Handle legacy single genre string
+          genres = [parsed];
+        }
+      } catch (e) {
+        // If parsing fails, treat as legacy single genre string
+        genres = [track.genre];
+      }
+    }
+    return {
+      ...track,
+      genres,
+    };
+  });
 }
 
 export async function findTrackByFile(uri: string, mtime?: number | null) {
@@ -247,6 +279,85 @@ export async function checkTrackExists(title: string, artistName: string, fileSi
       )
     );
   return result.length > 0;
+}
+
+export interface TrackMetadata {
+  id: string;
+  artworkUri: string | null;
+  durationMs: number | null;
+  genre: string | null;
+  discNumber: number | null;
+  trackNumber: number | null;
+  bitrate: number | null;
+  sampleRate: number | null;
+}
+
+export async function findTrackByTitleAndArtist(title: string, artistName: string): Promise<TrackMetadata | null> {
+  // Find a track with the same title and artist, returning its metadata
+  if (Platform.OS === 'web') {
+    const result = await idbFindTrackByTitleAndArtist(title, artistName);
+    return result as TrackMetadata | null;
+  }
+  const db = await getDb();
+  const result = await db
+    .select({ 
+      id: schema.tracks.id,
+      artworkUri: schema.tracks.artworkUri,
+      durationMs: schema.tracks.durationMs,
+      genre: schema.tracks.genre,
+      discNumber: schema.tracks.discNumber,
+      trackNumber: schema.tracks.trackNumber,
+      bitrate: schema.tracks.bitrate,
+      sampleRate: schema.tracks.sampleRate,
+    })
+    .from(schema.tracks)
+    .innerJoin(schema.artists, eq(schema.tracks.artistId, schema.artists.id))
+    .where(
+      and(
+        eq(schema.tracks.title, title),
+        eq(schema.artists.name, artistName),
+        eq(schema.tracks.isDeleted, false)
+      )
+    )
+    .limit(1);
+  return result[0] ?? null;
+}
+
+export interface TrackMetadataUpdate {
+  artworkUri?: string | null;
+  durationMs?: number | null;
+  genre?: string | null;
+  discNumber?: number | null;
+  trackNumber?: number | null;
+  bitrate?: number | null;
+  sampleRate?: number | null;
+}
+
+export async function updateTrackMetadata(trackId: string, updates: TrackMetadataUpdate) {
+  // Update track metadata, only setting fields that are provided
+  if (Platform.OS === 'web') {
+    await idbUpdateTrackMetadata(trackId, updates as IdbTrackMetadataUpdate);
+    return;
+  }
+
+  const db = await getDb();
+  const updateData: Partial<typeof schema.tracks.$inferInsert> = {
+    updatedAt: new Date(),
+  };
+
+  // Only include fields that are explicitly provided
+  if ('artworkUri' in updates) updateData.artworkUri = updates.artworkUri ?? null;
+  if ('durationMs' in updates) updateData.durationMs = updates.durationMs ?? null;
+  if ('genre' in updates) updateData.genre = updates.genre ?? null;
+  if ('discNumber' in updates) updateData.discNumber = updates.discNumber ?? null;
+  if ('trackNumber' in updates) updateData.trackNumber = updates.trackNumber ?? null;
+  if ('bitrate' in updates) updateData.bitrate = updates.bitrate ?? null;
+  if ('sampleRate' in updates) updateData.sampleRate = updates.sampleRate ?? null;
+
+  await db
+    .update(schema.tracks)
+    .set(updateData)
+    .where(eq(schema.tracks.id, trackId));
 }
 
 export async function updateTrackDuration(trackId: string, durationMs: number) {

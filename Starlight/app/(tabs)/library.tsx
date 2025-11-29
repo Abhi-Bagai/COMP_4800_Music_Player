@@ -485,7 +485,7 @@ export default function HomeScreen() {
                   artist: track.artist,
                   album: track.album,
                   durationMs: track.durationMs,
-                  genre: 'Dubstep', // Mock genre for now
+                  genres: track.genres ?? undefined, // Use genres array from metadata, or undefined if not available
                   bpm: 140, // Mock BPM for now
                   tags: trackTags[track.id] || [], // Get stored tags for this track
                 }))}

@@ -1,6 +1,6 @@
 import Slider from '@react-native-community/slider';
 import React, { useEffect, useRef } from "react";
-import { Pressable, StyleSheet, View, Animated, Dimensions } from "react-native";
+import { Pressable, StyleSheet, View, Animated, Dimensions, Image } from "react-native";
 
 import { Play, Pause, FastForward, Rewind, Volume2, Shuffle, Repeat, Tag, Music } from "lucide-react-native";
 import { Button } from "@/src/components/ui/button";
@@ -138,7 +138,11 @@ interface MiniPlayerProps {
 
 export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
   const { tokens } = useTheme();
-  const { activeTrack, isPlaying, positionMs, volume } = usePlayerStore();
+  // Use selectors to prevent unnecessary re-renders
+  const activeTrack = usePlayerStore((state) => state.activeTrack);
+  const isPlaying = usePlayerStore((state) => state.isPlaying);
+  const positionMs = usePlayerStore((state) => state.positionMs);
+  const volume = usePlayerStore((state) => state.volume);
 
   const { currentDisplayPosition, isScrubbing, wheelProps, formatTime: formatScrubTime } = useTrackScrubbing({
     sensitivity: 50,
@@ -193,7 +197,15 @@ export function MiniPlayer({ onPress, onTagTrack }: MiniPlayerProps) {
         <View style={styles.leftSection}>
           {/* Track Icon Square */}
           <View style={[styles.albumArt, { backgroundColor: tokens.colors.surfaceElevated }]}>
-            <Music size={20} color={tokens.colors.subtleText} />
+            {activeTrack.artworkUri ? (
+              <Image
+                source={{ uri: activeTrack.artworkUri }}
+                style={styles.albumArtImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <Music size={20} color={tokens.colors.subtleText} />
+            )}
           </View>
           <View style={styles.trackInfoContainer}>
             <ScrollingText
@@ -416,6 +428,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     flexShrink: 0,
+    overflow: "hidden",
+  },
+  albumArtImage: {
+    width: "100%",
+    height: "100%",
   },
   trackInfoContainer: {
     flex: 1,

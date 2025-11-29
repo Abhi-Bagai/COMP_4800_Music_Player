@@ -33,10 +33,21 @@ export const usePlayerStore = create<PlayerState>((set) => ({
   setQueue: (queue) => set({ queue }),
   setActiveTrack: (track) => set({ activeTrack: track }),
   setPlaybackStatus: ({ isPlaying, positionMs }) =>
-    set((prev) => ({
-      isPlaying: isPlaying ?? prev.isPlaying,
-      positionMs: positionMs ?? prev.positionMs,
-    })),
+    set((prev) => {
+      // Only update if values are actually provided and different
+      const newIsPlaying = isPlaying !== undefined ? isPlaying : prev.isPlaying;
+      const newPositionMs = positionMs !== undefined ? positionMs : prev.positionMs;
+      
+      // Only trigger update if something actually changed
+      if (newIsPlaying === prev.isPlaying && newPositionMs === prev.positionMs) {
+        return prev;
+      }
+      
+      return {
+        isPlaying: newIsPlaying,
+        positionMs: newPositionMs,
+      };
+    }),
   setVolume: (volume, isMuted) =>
     set((prev) => ({
       volume,

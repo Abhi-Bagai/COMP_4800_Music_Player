@@ -27,6 +27,8 @@ export const INITIAL_MIGRATION = [
     track_number INTEGER,
     bitrate INTEGER,
     sample_rate INTEGER,
+    genre TEXT,
+    artwork_uri TEXT,
     file_uri TEXT,
     file_mtime INTEGER,
     file_size INTEGER,
@@ -58,7 +60,13 @@ export const INITIAL_MIGRATION = [
     track_id TEXT,
     position INTEGER,
     added_at INTEGER
-  )`
+  )`,
+  // Add genre column to existing tracks table if it doesn't exist
+  // This will fail silently if the column already exists, which is fine
+  `ALTER TABLE tracks ADD COLUMN genre TEXT`,
+  // Add artwork_uri column to existing tracks table if it doesn't exist
+  // This will fail silently if the column already exists, which is fine
+  `ALTER TABLE tracks ADD COLUMN artwork_uri TEXT`
 ];
 
 export async function runInitialMigration(db: { execAsync: (sql: string) => Promise<void> }) {
@@ -70,6 +78,12 @@ export async function runInitialMigration(db: { execAsync: (sql: string) => Prom
         await db.execAsync(statement);
         console.log(`Migration step ${i + 1} completed successfully`);
       } catch (error: any) {
+        // For ALTER TABLE statements, ignore "duplicate column" errors
+        // This allows the migration to work on both new and existing databases
+        if (statement.includes('ALTER TABLE') && error.message?.includes('duplicate column')) {
+          console.log(`Migration step ${i + 1} skipped (column already exists)`);
+          continue;
+        }
         console.error(`Migration step ${i + 1} failed:`, error.message);
         console.error('Statement:', statement);
         throw error; // Stop on first error

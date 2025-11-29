@@ -6,24 +6,63 @@ import { idbUpdateTrackFileUri } from '@/src/db/indexeddb';
 import { useLibraryStore, usePlayerStore } from '@/src/state';
 
 let currentPlayer: ReturnType<typeof useAudioPlayer> | null = null;
-let statusUpdateInterval: NodeJS.Timeout | null = null;
+let statusUpdateInterval: ReturnType<typeof setInterval> | null = null;
+let lastManualUpdateTime = 0;
+let lastReportedPositionMs = 0;
+let lastReportedIsPlaying: boolean | null = null;
+const MANUAL_UPDATE_COOLDOWN = 500; // Don't let interval overwrite manual updates for 500ms
+const POSITION_UPDATE_THRESHOLD = 250; // Only update position if it changed by more than 250ms
 
 function setupStatusUpdates(player: ReturnType<typeof useAudioPlayer>) {
   if (statusUpdateInterval) {
     clearInterval(statusUpdateInterval);
+    statusUpdateInterval = null;
   }
+
+  // Reset tracking when setting up new player
+  lastReportedPositionMs = 0;
+  lastReportedIsPlaying = null;
 
   statusUpdateInterval = setInterval(() => {
     try {
-      const isPlaying = !!player.playing;
-      const rawCurrentTime = player.currentTime; // seconds
+      // Read player state atomically to avoid race conditions
+      const playerRef = player;
+      if (!playerRef || playerRef !== currentPlayer) {
+        return;
+      }
+
+      // Don't update if we just manually updated (to prevent race conditions)
+      const timeSinceManualUpdate = Date.now() - lastManualUpdateTime;
+      if (timeSinceManualUpdate < MANUAL_UPDATE_COOLDOWN) {
+        return;
+      }
+
+      const isPlaying = !!playerRef.playing;
+      const rawCurrentTime = playerRef.currentTime; // seconds
 
       const safeCurrentTimeSec = Number.isFinite(rawCurrentTime) && rawCurrentTime >= 0 ? rawCurrentTime : 0;
+      const positionMs = Math.max(0, Math.floor(safeCurrentTimeSec * 1000));
 
-      usePlayerStore.getState().setPlaybackStatus({
-        isPlaying,
-        positionMs: Math.max(0, Math.floor(safeCurrentTimeSec * 1000)),
-      });
+      // Check if isPlaying changed
+      const isPlayingChanged = lastReportedIsPlaying !== isPlaying;
+      
+      // Check if position changed significantly (to avoid micro-updates causing flicker)
+      const positionDiff = Math.abs(positionMs - lastReportedPositionMs);
+      const positionChanged = positionDiff > POSITION_UPDATE_THRESHOLD;
+
+      // Only update if something meaningful changed
+      if (isPlayingChanged || positionChanged) {
+        lastReportedIsPlaying = isPlaying;
+        lastReportedPositionMs = positionMs;
+        
+        usePlayerStore.getState().setPlaybackStatus({
+          isPlaying,
+          positionMs,
+        });
+      } else {
+        // Update tracking even if we don't update store (for threshold calculation)
+        lastReportedPositionMs = positionMs;
+      }
     } catch (error) {
       console.warn('Error updating playback status:', error);
     }
@@ -174,10 +213,16 @@ export function setCurrentPlayer(player: ReturnType<typeof useAudioPlayer>, trac
     return;
   }
 
-  setupStatusUpdates(player);
+  // Reset tracking and update state before setting up interval
+  lastReportedPositionMs = 0;
+  lastReportedIsPlaying = true;
+  lastManualUpdateTime = Date.now();
+  
   setActiveTrack(track);
   setPlaybackStatus({ isPlaying: true, positionMs: 0 });
   setQueue([{ track, queuedAt: Date.now() }]);
+  
+  setupStatusUpdates(player);
 }
 
 export async function togglePlayPause() {
@@ -186,11 +231,19 @@ export async function togglePlayPause() {
   }
 
   try {
-    if (currentPlayer.playing) {
+    const wasPlaying = currentPlayer.playing;
+    const newIsPlaying = !wasPlaying;
+    
+    if (wasPlaying) {
       currentPlayer.pause();
     } else {
       currentPlayer.play();
     }
+    
+    // Update state immediately and mark the time to prevent interval from overwriting
+    lastManualUpdateTime = Date.now();
+    lastReportedIsPlaying = newIsPlaying;
+    usePlayerStore.getState().setPlaybackStatus({ isPlaying: newIsPlaying });
   } catch (error) {
     console.error('Error in togglePlayPause:', error);
   }
@@ -204,6 +257,11 @@ export async function seekTo(positionMs: number) {
     const durationMs = durationSec > 0 ? durationSec * 1000 : undefined;
     const clampedMs = durationMs ? Math.min(Math.max(positionMs, 0), durationMs) : Math.max(positionMs, 0);
     currentPlayer.seekTo(clampedMs / 1000); // Convert to seconds
+    
+    // Update state immediately and mark the time to prevent interval from overwriting
+    lastManualUpdateTime = Date.now();
+    lastReportedPositionMs = clampedMs;
+    usePlayerStore.getState().setPlaybackStatus({ positionMs: clampedMs });
   } catch (error) {
     console.error('Error seeking:', error);
   }
