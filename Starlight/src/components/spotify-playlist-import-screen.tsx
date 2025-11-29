@@ -15,12 +15,12 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Text } from '@/src/components/ui/text';
 import { Button } from '@/src/components/ui/button';
 import {
-  checkSpotifyStatus,
+  getSpotifyStatus,
   getSpotifyPlaylists,
-  getSpotifyAuthUrl,
+  getSpotifyLoginUrl,
   importSpotifyPlaylist,
   type SpotifyPlaylist,
-} from '@/src/services/spotify-api';
+} from '@/src/services/spotify-api-client';
 import { createPlaylist } from '@/src/db/playlist-repository';
 import { hydratePlaylistsFromDatabase } from '@/src/services/playlist-service';
 import { usePlaylistStore } from '@/src/state/playlist-store';
@@ -71,7 +71,7 @@ export function SpotifyPlaylistImportScreen({ onBack }: SpotifyPlaylistImportScr
   const checkAuthStatus = async () => {
     setIsLoading(true);
     try {
-      const status = await checkSpotifyStatus();
+      const status = await getSpotifyStatus();
       setIsLinked(status.linked);
       if (status.linked && status.profile) {
         setProfile({
@@ -105,7 +105,7 @@ export function SpotifyPlaylistImportScreen({ onBack }: SpotifyPlaylistImportScr
   const handleAuthenticate = async () => {
     setIsAuthenticating(true);
     try {
-      const authUrl = getSpotifyAuthUrl();
+      const authUrl = getSpotifyLoginUrl();
 
       if (Platform.OS === 'web') {
         // For web, open in same window

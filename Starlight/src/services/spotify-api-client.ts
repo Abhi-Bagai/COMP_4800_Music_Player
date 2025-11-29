@@ -1,12 +1,14 @@
 /**
  * Client-side Spotify API service
- * 
+ *
  * This service provides functions to interact with the Starlight backend
  * Spotify endpoints. All Spotify API calls go through the backend.
  */
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8081';
-// console.log(API_BASE_URL);
+// Support both environment variable names for compatibility
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL || process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8081';
+
 /**
  * Spotify connection status
  */
@@ -55,15 +57,23 @@ export interface SpotifyTrack {
  * Check Spotify connection status
  */
 export async function getSpotifyStatus(): Promise<SpotifyStatus> {
-  const response = await fetch(`${API_BASE_URL}/api/spotify/status`, {
-    credentials: 'include', // Include session cookies
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/spotify/status`, {
+      credentials: 'include', // Include session cookies
+    });
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch Spotify status');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error checking Spotify status:', error);
+    return {
+      linked: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
   }
-
-  return response.json();
 }
 
 /**
@@ -74,46 +84,60 @@ export async function getSpotifyPlaylists(): Promise<{
   total: number;
   hasMore: boolean;
 }> {
-  const response = await fetch(`${API_BASE_URL}/api/spotify/playlists`, {
-    credentials: 'include',
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/spotify/playlists`, {
+      credentials: 'include',
+    });
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch Spotify playlists');
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Not authenticated. Please connect your Spotify account.');
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching Spotify playlists:', error);
+    throw error;
   }
-
-  return response.json();
 }
 
 /**
  * Get tracks for a Spotify playlist
  */
-export async function getSpotifyPlaylistTracks(
-  playlistId: string
-): Promise<{
+export async function getSpotifyPlaylistTracks(playlistId: string): Promise<{
   tracks: SpotifyTrack[];
   total: number;
   hasMore: boolean;
 }> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/spotify/playlists/${playlistId}/tracks`,
-    {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/spotify/playlists/${playlistId}/tracks`, {
       credentials: 'include',
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Not authenticated. Please connect your Spotify account.');
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  );
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch playlist tracks');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching playlist tracks:', error);
+    throw error;
   }
-
-  return response.json();
 }
 
 /**
  * Import a Spotify playlist
  * Returns data ready for local DB import
  */
-export async function importSpotifyPlaylist(playlistId: string, playlistName?: string): Promise<{
+export async function importSpotifyPlaylist(
+  playlistId: string,
+  playlistName?: string
+): Promise<{
   success: boolean;
   playlistId: string;
   playlistName: string;
@@ -131,23 +155,28 @@ export async function importSpotifyPlaylist(playlistId: string, playlistName?: s
   }>;
   importedCount: number;
 }> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/spotify/playlists/${playlistId}/import`,
-    {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/spotify/playlists/${playlistId}/import`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       credentials: 'include',
       body: JSON.stringify({ playlistName }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Not authenticated. Please connect your Spotify account.');
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  );
 
-  if (!response.ok) {
-    throw new Error('Failed to import playlist');
+    return await response.json();
+  } catch (error) {
+    console.error('Error importing Spotify playlist:', error);
+    throw error;
   }
-
-  return response.json();
 }
 
 /**
@@ -158,3 +187,14 @@ export function getSpotifyLoginUrl(): string {
   return `${API_BASE_URL}/auth/spotify/login`;
 }
 
+/**
+ * Alias for backward compatibility
+ * @deprecated Use getSpotifyStatus instead
+ */
+export const checkSpotifyStatus = getSpotifyStatus;
+
+/**
+ * Alias for backward compatibility
+ * @deprecated Use getSpotifyLoginUrl instead
+ */
+export const getSpotifyAuthUrl = getSpotifyLoginUrl;
