@@ -127,26 +127,57 @@ router.get('/spotify/callback', async (ctx: Context) => {
     // Calculate token expiration
     const expiresAt = new Date(Date.now() + tokenResponse.expires_in * 1000);
 
-    // Create or update Spotify account
-    await prisma.spotifyAccount.upsert({
-      where: { userId },
-      create: {
-        userId,
-        spotifyUserId: spotifyProfile.id,
-        accessToken: tokenResponse.access_token,
-        refreshToken: tokenResponse.refresh_token || '', // Should always be present
-        expiresAt,
-        scope: tokenResponse.scope,
-      },
-      update: {
-        spotifyUserId: spotifyProfile.id,
-        accessToken: tokenResponse.access_token,
-        refreshToken: tokenResponse.refresh_token || undefined,
-        expiresAt,
-        scope: tokenResponse.scope,
-        updatedAt: new Date(),
-      },
+    // Check if this Spotify account is already linked to a user
+    const existingAccount = await prisma.spotifyAccount.findUnique({
+      where: { spotifyUserId: spotifyProfile.id },
     });
+
+    if (existingAccount) {
+      // Spotify account already exists - update it (handles re-authentication)
+      await prisma.spotifyAccount.update({
+        where: { spotifyUserId: spotifyProfile.id },
+        data: {
+          userId, // Update userId in case user is re-authenticating
+          accessToken: tokenResponse.access_token,
+          refreshToken: tokenResponse.refresh_token || '',
+          expiresAt,
+          scope: tokenResponse.scope,
+          updatedAt: new Date(),
+        },
+      });
+    } else {
+      // Check if user already has a Spotify account linked
+      const userAccount = await prisma.spotifyAccount.findUnique({
+        where: { userId },
+      });
+
+      if (userAccount) {
+        // User has existing account, update it
+        await prisma.spotifyAccount.update({
+          where: { userId },
+          data: {
+            spotifyUserId: spotifyProfile.id,
+            accessToken: tokenResponse.access_token,
+            refreshToken: tokenResponse.refresh_token || '',
+            expiresAt,
+            scope: tokenResponse.scope,
+            updatedAt: new Date(),
+          },
+        });
+      } else {
+        // Create new account
+        await prisma.spotifyAccount.create({
+          data: {
+            userId,
+            spotifyUserId: spotifyProfile.id,
+            accessToken: tokenResponse.access_token,
+            refreshToken: tokenResponse.refresh_token || '',
+            expiresAt,
+            scope: tokenResponse.scope,
+          },
+        });
+      }
+    }
 
     // Clean up login attempt
     await prisma.spotifyLoginAttempt.delete({
