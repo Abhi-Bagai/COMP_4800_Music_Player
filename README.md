@@ -122,8 +122,6 @@ A modern, cross-platform music player application built with React Native and Ex
    FRONTEND_DEEP_LINK=starlight://auth/spotify/success
    FRONTEND_URL=http://localhost:8081
 
-   # Optional: Cache TTL (in seconds)
-   SPOTIFY_CACHE_TTL=300
    ```
 
 4. **Set up the database:**
